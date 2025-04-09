@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.text.Text?>
+<?import javafx.scene.effect.DropShadow?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.image.Image?>
+
+<StackPane xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.dungeon.controllers.MainMenuController"
+      styleClass="main-menu-background">
+    
+    <!-- Background Image -->
+    <ImageView fitWidth="1024" fitHeight="768" preserveRatio="false">
+        <image>
+            <Image url="@../assets/images/menu_background.jpg"/>
+        </image>
+        <effect>
+            <DropShadow radius="10" spread="0.2"/>
+        </effect>
+    </ImageView>
+    
+    <VBox alignment="CENTER" spacing="40" styleClass="main-menu">
+        <Text styleClass="title-text" text="Dungeon Eclipse">
+            <effect>
+                <DropShadow radius="10" spread="0.4" color="BLACK"/>
+            </effect>
+        </Text>
+        
+        <VBox alignment="CENTER" spacing="15" styleClass="menu-buttons">
+            <Button fx:id="newGameButton" text="New Game" onAction="#startNewGame" styleClass="menu-button"/>
+            <Button fx:id="tutorialButton" text="Tutorial" onAction="#openTutorial" styleClass="menu-button"/>
+            <Button fx:id="highScoreButton" text="High Scores" onAction="#openHighScores" styleClass="menu-button"/>
+            <Button fx:id="optionsButton" text="Options" onAction="#openOptions" styleClass="menu-button"/>
+            <Button fx:id="exitButton" text="Exit" onAction="#exitGame" styleClass="menu-button"/>
+        </VBox>
+        
+        <HBox alignment="CENTER" spacing="10" styleClass="footer">
+            <Text styleClass="footer-text" text="Version 1.0"/>
+        </HBox>
+    </VBox>
+</StackPane>

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.effect.DropShadow?>
+
+<StackPane xmlns="http://javafx.com/javafx"
+          xmlns:fx="http://javafx.com/fxml"
+          fx:controller="com.dungeon.controllers.VictoryController"
+          styleClass="main-menu-background">
+          
+    <VBox alignment="CENTER" spacing="30" styleClass="victory-panel" maxWidth="500" maxHeight="400">
+        <padding>
+            <Insets top="30" right="40" bottom="30" left="40" />
+        </padding>
+        
+        <Text text="Victory!" styleClass="title-text">
+            <fill>
+                <javafx.scene.paint.Color red="0.2" green="0.8" blue="0.2" />
+            </fill>
+            <effect>
+                <DropShadow radius="10" spread="0.4" />
+            </effect>
+        </Text>
+        
+        <VBox alignment="CENTER" spacing="15">
+            <Text fx:id="congratsText" text="Congratulations, adventurer!" styleClass="score-text">
+                <fill>
+                    <javafx.scene.paint.Color red="0.9" green="0.9" blue="0.9" />
+                </fill>
+            </Text>
+            
+            <Text fx:id="scoreText" text="Final Score: 0" styleClass="score-text">
+                <fill>
+                    <javafx.scene.paint.Color red="0.9" green="0.9" blue="0.9" />
+                </fill>
+            </Text>
+            
+            <Text fx:id="timeText" text="Time: 00:00" styleClass="score-text">
+                <fill>
+                    <javafx.scene.paint.Color red="0.9" green="0.9" blue="0.9" />
+                </fill>
+            </Text>
+            
+            <Text fx:id="enemiesText" text="Enemies Defeated: 0" styleClass="score-text">
+                <fill>
+                    <javafx.scene.paint.Color red="0.9" green="0.9" blue="0.9" />
+                </fill>
+            </Text>
+        </VBox>
+        
+        <VBox alignment="CENTER" spacing="15" styleClass="menu-buttons">
+            <Button fx:id="nextLevelButton" onAction="#startNextLevel" text="Next Level" styleClass="menu-button" />
+            <Button fx:id="mainMenuButton" text="Main Menu" onAction="#returnToMainMenu" styleClass="menu-button" />
+            <Button fx:id="quitButton" text="Quit Game" onAction="#quitGame" styleClass="menu-button" />
+        </VBox>
+    </VBox>
+</StackPane> 

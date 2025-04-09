@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.text.Text?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.dungeon.controllers.InventoryController"
+      styleClass="inventory-panel"
+      spacing="10"
+      maxWidth="300"
+      maxHeight="400">
+    
+    <padding>
+        <Insets top="10" right="10" bottom="10" left="10"/>
+    </padding>
+
+    <Text text="Inventory" styleClass="inventory-title"/>
+    
+    <ListView fx:id="itemListView" VBox.vgrow="ALWAYS"/>
+    
+    <HBox spacing="10" alignment="CENTER">
+        <Button text="Use" onAction="#useItem" fx:id="useButton"/>
+        <Button text="Drop" onAction="#dropItem" fx:id="dropButton"/>
+        <Button text="Close" onAction="#closeInventory" fx:id="closeButton"/>
+    </HBox>
+</VBox>

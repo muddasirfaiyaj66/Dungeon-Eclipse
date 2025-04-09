@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.canvas.Canvas?>
+
+<BorderPane fx:id="rootPane" 
+          xmlns="http://javafx.com/javafx"
+          xmlns:fx="http://javafx.com/fxml"
+          fx:controller="com.dungeon.controllers.GameController"
+          prefWidth="1024" prefHeight="768">
+    <center>
+        <StackPane fx:id="canvasContainer" 
+                   VBox.vgrow="ALWAYS" HBox.hgrow="ALWAYS"
+                   maxWidth="Infinity" maxHeight="Infinity">
+            <Canvas fx:id="gameCanvas" width="1024" height="768"
+                    StackPane.alignment="CENTER"/>
+        </StackPane>
+    </center>
+</BorderPane>

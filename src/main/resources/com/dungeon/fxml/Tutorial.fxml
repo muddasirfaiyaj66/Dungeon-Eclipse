@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.effect.DropShadow?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.image.Image?>
+
+<BorderPane xmlns="http://javafx.com/javafx"
+          xmlns:fx="http://javafx.com/fxml"
+          fx:controller="com.dungeon.controllers.TutorialController"
+          styleClass="main-menu-background">
+    
+    <top>
+        <VBox alignment="CENTER" spacing="10">
+            <padding>
+                <Insets top="20" bottom="10" />
+            </padding>
+            <Text text="How to Play" styleClass="title-text">
+                <fill>
+                    <javafx.scene.paint.Color red="0.9" green="0.7" blue="0.1" />
+                </fill>
+                <effect>
+                    <DropShadow radius="5" spread="0.2" />
+                </effect>
+            </Text>
+        </VBox>
+    </top>
+    
+    <center>
+        <ScrollPane fitToWidth="true" styleClass="tutorial-scroll">
+            <VBox spacing="20" styleClass="tutorial-content">
+                <padding>
+                    <Insets top="20" right="30" bottom="20" left="30" />
+                </padding>
+                
+                <VBox styleClass="tutorial-section">
+                    <Text text="Controls" styleClass="section-title" />
+                    <GridPane hgap="15" vgap="10">
+                        <columnConstraints>
+                            <ColumnConstraints hgrow="NEVER" minWidth="100" />
+                            <ColumnConstraints hgrow="ALWAYS" />
+                        </columnConstraints>
+                        
+                        <Text text="W, A, S, D" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="key-text" />
+                        <Text text="Move character" GridPane.rowIndex="0" GridPane.columnIndex="1" />
+                        
+                        <Text text="Mouse" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="key-text" />
+                        <Text text="Aim weapons and abilities" GridPane.rowIndex="1" GridPane.columnIndex="1" />
+                        
+                        <Text text="Left Click" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="key-text" />
+                        <Text text="Attack" GridPane.rowIndex="2" GridPane.columnIndex="1" />
+                        
+                        <Text text="E" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="key-text" />
+                        <Text text="Interact with objects, doors, and puzzles" GridPane.rowIndex="3" GridPane.columnIndex="1" />
+                        
+                        <Text text="I" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="key-text" />
+                        <Text text="Open inventory" GridPane.rowIndex="4" GridPane.columnIndex="1" />
+                        
+                        <Text text="ESC" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="key-text" />
+                        <Text text="Pause game" GridPane.rowIndex="5" GridPane.columnIndex="1" />
+                        
+                        <Text text="1-5" GridPane.rowIndex="6" GridPane.columnIndex="0" styleClass="key-text" />
+                        <Text text="Switch weapons" GridPane.rowIndex="6" GridPane.columnIndex="1" />
+                    </GridPane>
+                </VBox>
+                
+                <VBox styleClass="tutorial-section">
+                    <Text text="Game Mechanics" styleClass="section-title" />
+                    <Text text="◆ Each playthrough features a unique procedurally generated dungeon." wrappingWidth="700" />
+                    <Text text="◆ Explore rooms, battle enemies, and collect treasures." wrappingWidth="700" />
+                    <Text text="◆ Solve puzzles to unlock paths and discover secrets." wrappingWidth="700" />
+                    <Text text="◆ Defeat the boss at the end of each level to progress." wrappingWidth="700" />
+                    <Text text="◆ Manage your inventory and use items wisely." wrappingWidth="700" />
+                </VBox>
+                
+                <VBox styleClass="tutorial-section">
+                    <Text text="Room Types" styleClass="section-title" />
+                    <HBox spacing="20">
+                        <VBox alignment="TOP_CENTER" styleClass="room-type">
+                            <Text text="Combat Rooms" styleClass="room-type-title" />
+                            <Text text="Defeat all enemies to progress" textAlignment="CENTER" wrappingWidth="150" />
+                        </VBox>
+                        <VBox alignment="TOP_CENTER" styleClass="room-type">
+                            <Text text="Puzzle Rooms" styleClass="room-type-title" />
+                            <Text text="Solve the puzzle to unlock doors" textAlignment="CENTER" wrappingWidth="150" />
+                        </VBox>
+                        <VBox alignment="TOP_CENTER" styleClass="room-type">
+                            <Text text="Treasure Rooms" styleClass="room-type-title" />
+                            <Text text="Collect valuable items and power-ups" textAlignment="CENTER" wrappingWidth="150" />
+                        </VBox>
+                        <VBox alignment="TOP_CENTER" styleClass="room-type">
+                            <Text text="Boss Rooms" styleClass="room-type-title" />
+                            <Text text="Defeat the powerful boss to complete the level" textAlignment="CENTER" wrappingWidth="150" />
+                        </VBox>
+                    </HBox>
+                </VBox>
+                
+                <VBox styleClass="tutorial-section">
+                    <Text text="Tips" styleClass="section-title" />
+                    <Text text="◆ Look for health potions to restore your health." wrappingWidth="700" />
+                    <Text text="◆ Keys are required to unlock certain doors." wrappingWidth="700" />
+                    <Text text="◆ Some enemies have special abilities - observe their attack patterns." wrappingWidth="700" />
+                    <Text text="◆ Bosses have multiple phases and weak spots to exploit." wrappingWidth="700" />
+                    <Text text="◆ Collect gold to increase your score." wrappingWidth="700" />
+                </VBox>
+            </VBox>
+        </ScrollPane>
+    </center>
+    
+    <bottom>
+        <HBox alignment="CENTER" spacing="20">
+            <padding>
+                <Insets top="10" right="20" bottom="20" left="20" />
+            </padding>
+            <Button fx:id="closeButton" text="Close" onAction="#closeWindow" styleClass="menu-button" />
+        </HBox>
+    </bottom>
+</BorderPane> 
