@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.ArrayList;
 
 /**
  * Represents a puzzle that can be solved by the player
@@ -13,7 +14,10 @@ public class Puzzle {
     public enum PuzzleType {
         SEQUENCE,  // Complete the sequence
         RIDDLE,    // Answer a riddle
-        PATTERN    // Identify a pattern
+        PATTERN,   // Identify a pattern
+        MATH,      // Solve a math problem
+        WORD,      // Word puzzle
+        LOGIC      // Logic puzzle
     }
     
     private final PuzzleType type;
@@ -226,15 +230,21 @@ public class Puzzle {
      */
     public static Puzzle createRandomPuzzle() {
         Random random = new Random();
-        int puzzleType = random.nextInt(3);
+        int puzzleType = random.nextInt(6);
         
         switch (puzzleType) {
             case 0:
                 return createSequencePuzzle();
             case 1:
                 return createRiddlePuzzle();
-            default:
+            case 2:
                 return createPatternPuzzle();
+            case 3:
+                return createMathPuzzle();
+            case 4:
+                return createWordPuzzle();
+            default:
+                return createLogicPuzzle();
         }
     }
     
@@ -292,6 +302,176 @@ public class Puzzle {
         }
         
         return sequence.toString();
+    }
+    
+    public static Puzzle createMathPuzzle() {
+        Random random = new Random();
+        int puzzleType = random.nextInt(3);
+        String question;
+        String answer;
+        String description = "Solve the mathematical problem.";
+
+        switch (puzzleType) {
+            case 0: // Basic arithmetic
+                int num1 = random.nextInt(20) + 1;
+                int num2 = random.nextInt(20) + 1;
+                int operation = random.nextInt(4);
+                switch (operation) {
+                    case 0: // Addition
+                        question = num1 + " + " + num2 + " = ?";
+                        answer = String.valueOf(num1 + num2);
+                        break;
+                    case 1: // Subtraction
+                        question = num1 + " - " + num2 + " = ?";
+                        answer = String.valueOf(num1 - num2);
+                        break;
+                    case 2: // Multiplication
+                        question = num1 + " × " + num2 + " = ?";
+                        answer = String.valueOf(num1 * num2);
+                        break;
+                    default: // Division
+                        num2 = random.nextInt(10) + 1; // Avoid division by zero
+                        question = num1 + " ÷ " + num2 + " = ?";
+                        answer = String.valueOf(num1 / num2);
+                        break;
+                }
+                break;
+
+            case 1: // Word problem
+                int apples = random.nextInt(10) + 1;
+                int oranges = random.nextInt(10) + 1;
+                question = "If you have " + apples + " apples and " + oranges + 
+                          " oranges, how many fruits do you have in total?";
+                answer = String.valueOf(apples + oranges);
+                break;
+
+            default: // Pattern with operations
+                int start = random.nextInt(5) + 1;
+                int[] operations = new int[3];
+                for (int i = 0; i < operations.length; i++) {
+                    operations[i] = random.nextInt(5) + 1;
+                }
+                question = "If " + start + " × " + operations[0] + " + " + 
+                          operations[1] + " - " + operations[2] + " = ?";
+                answer = String.valueOf(start * operations[0] + operations[1] - operations[2]);
+                break;
+        }
+
+        return new Puzzle(PuzzleType.MATH, description, question, answer);
+    }
+
+    public static Puzzle createWordPuzzle() {
+        Random random = new Random();
+        int puzzleType = random.nextInt(3);
+        String question;
+        String answer;
+        String description = "Solve the word puzzle.";
+
+        switch (puzzleType) {
+            case 0: // Anagram
+                String[] words = {
+                    "HEART", "EARTH",
+                    "LISTEN", "SILENT",
+                    "STATE", "TASTE",
+                    "NIGHT", "THING",
+                    "STARE", "TEARS"
+                };
+                int index = random.nextInt(words.length / 2) * 2;
+                question = "Unscramble this word: " + scrambleWord(words[index]);
+                answer = words[index];
+                break;
+
+            case 1: // Missing vowels
+                String[] wordsNoVowels = {
+                    "APPLE", "PPL",
+                    "ELEPHANT", "LPHNT",
+                    "ORANGE", "RNG",
+                    "UMBRELLA", "MBRLL",
+                    "ISLAND", "SLND"
+                };
+                index = random.nextInt(wordsNoVowels.length / 2) * 2;
+                question = "Add the missing vowels to: " + wordsNoVowels[index + 1];
+                answer = wordsNoVowels[index];
+                break;
+
+            default: // Word chain
+                String[] wordChains = {
+                    "COLD -> WARM -> HOT", "COLD",
+                    "SMILE -> LAUGH -> CRY", "SMILE",
+                    "START -> BEGIN -> END", "START",
+                    "UP -> DOWN -> SIDE", "UP",
+                    "DAY -> NIGHT -> MORNING", "DAY"
+                };
+                index = random.nextInt(wordChains.length / 2) * 2;
+                question = "What's the first word in this chain: " + wordChains[index];
+                answer = wordChains[index + 1];
+                break;
+        }
+
+        return new Puzzle(PuzzleType.WORD, description, question, answer);
+    }
+
+    public static Puzzle createLogicPuzzle() {
+        Random random = new Random();
+        int puzzleType = random.nextInt(3);
+        String question;
+        String answer;
+        String description = "Solve the logic puzzle.";
+
+        switch (puzzleType) {
+            case 0: // Color sequence
+                String[] colors = {"RED", "BLUE", "GREEN", "YELLOW", "PURPLE"};
+                int[] sequence = new int[4];
+                for (int i = 0; i < sequence.length; i++) {
+                    sequence[i] = random.nextInt(colors.length);
+                }
+                question = "What color comes next in this sequence: " +
+                          colors[sequence[0]] + ", " + colors[sequence[1]] + ", " +
+                          colors[sequence[2]] + ", " + colors[sequence[3]] + ", ?";
+                answer = colors[sequence[3]];
+                break;
+
+            case 1: // True/False logic
+                String[] logicQuestions = {
+                    "If all A are B, and all B are C, then all A are C. (True/False)", "TRUE",
+                    "If it's raining, the ground is wet. The ground is wet, so it's raining. (True/False)", "FALSE",
+                    "All birds can fly. Penguins are birds, so penguins can fly. (True/False)", "FALSE",
+                    "If you study, you'll pass. You passed, so you studied. (True/False)", "FALSE",
+                    "All squares are rectangles. All rectangles are quadrilaterals. So all squares are quadrilaterals. (True/False)", "TRUE"
+                };
+                int index = random.nextInt(logicQuestions.length / 2) * 2;
+                question = logicQuestions[index];
+                answer = logicQuestions[index + 1];
+                break;
+
+            default: // Pattern completion
+                String[] patterns = {
+                    "2, 4, 8, 16, ?", "32",
+                    "1, 3, 6, 10, ?", "15",
+                    "3, 6, 9, 12, ?", "15",
+                    "1, 2, 4, 7, ?", "11",
+                    "2, 3, 5, 7, ?", "11"
+                };
+                index = random.nextInt(patterns.length / 2) * 2;
+                question = patterns[index];
+                answer = patterns[index + 1];
+                break;
+        }
+
+        return new Puzzle(PuzzleType.LOGIC, description, question, answer);
+    }
+
+    private static String scrambleWord(String word) {
+        List<Character> chars = new ArrayList<>();
+        for (char c : word.toCharArray()) {
+            chars.add(c);
+        }
+        Collections.shuffle(chars);
+        StringBuilder scrambled = new StringBuilder();
+        for (char c : chars) {
+            scrambled.append(c);
+        }
+        return scrambled.toString();
     }
     
     // Getters and setters

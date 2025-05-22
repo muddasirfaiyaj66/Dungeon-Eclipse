@@ -2,20 +2,28 @@ package com.dungeon.controllers;
 
 import com.dungeon.model.DungeonRoom;
 import com.dungeon.model.Puzzle;
+import com.dungeon.audio.SoundManager;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.HBox;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.input.KeyCode;
+import javafx.animation.PauseTransition;
+import javafx.util.Duration;
 import javafx.stage.Stage;
+import javafx.scene.Scene;
 
 public class PuzzleController {
     @FXML
-    private Label puzzleDescription;
+    private VBox rootContainer;
     
     @FXML
-    private Label puzzleContent;
+    private Label puzzleDescription;
     
     @FXML
     private TextField answerField;
@@ -23,83 +31,103 @@ public class PuzzleController {
     @FXML
     private Button submitButton;
     
-    @FXML
-    private VBox sequenceContainer;
-    
-    @FXML
-    private VBox patternContainer;
-    
-    @FXML
-    private VBox riddleContainer;
-    
     private Puzzle puzzle;
     private DungeonRoom room;
     private GameController gameController;
+    private SoundManager soundManager;
+    
+    public void initialize() {
+        // Initialize sound manager
+        soundManager = SoundManager.getInstance();
+        
+        // Set up submit button action
+        submitButton.setOnAction(e -> checkAnswer());
+        
+        // Add keyboard shortcut for submitting
+        answerField.setOnKeyPressed(e -> {
+            if (e.getCode() == KeyCode.ENTER) {
+                checkAnswer();
+            }
+        });
+    }
     
     public void initialize(Puzzle puzzle, DungeonRoom room, GameController gameController) {
         this.puzzle = puzzle;
         this.room = room;
         this.gameController = gameController;
         
-        // Set up puzzle UI based on puzzle type
+        // Update UI with puzzle information
         puzzleDescription.setText(puzzle.getDescription());
-        
-        // Hide all containers first
-        sequenceContainer.setVisible(false);
-        patternContainer.setVisible(false);
-        riddleContainer.setVisible(false);
-        
-        // Show appropriate container based on puzzle type
-        switch (puzzle.getType()) {
-            case SEQUENCE:
-                setupSequencePuzzle();
-                break;
-            case RIDDLE:
-                setupRiddlePuzzle();
-                break;
-            case PATTERN:
-                setupPatternPuzzle();
-                break;
-        }
-        
-        // Set up submit button action
-        submitButton.setOnAction(event -> checkAnswer());
-    }
-    
-    private void setupSequencePuzzle() {
-        sequenceContainer.setVisible(true);
-        puzzleContent.setText(puzzle.getSequence());
-    }
-    
-    private void setupRiddlePuzzle() {
-        riddleContainer.setVisible(true);
-        puzzleContent.setText(puzzle.getRiddle());
-    }
-    
-    private void setupPatternPuzzle() {
-        patternContainer.setVisible(true);
-        puzzleContent.setText(puzzle.getPattern());
+        answerField.setPromptText("Enter your answer");
     }
     
     private void checkAnswer() {
-        String userAnswer = answerField.getText().trim();
-        
-        if (userAnswer.equalsIgnoreCase(puzzle.getAnswer())) {
-            // Correct answer
-            puzzle.setSolved(true);
+        if (puzzle == null) return;
+
+        String userAnswer = answerField.getText().trim().toUpperCase();
+        String correctAnswer = puzzle.getAnswer().toUpperCase();
+
+        boolean isCorrect = switch (puzzle.getType()) {
+            case MATH -> {
+                try {
+                    int userNum = Integer.parseInt(userAnswer);
+                    int correctNum = Integer.parseInt(correctAnswer);
+                    yield userNum == correctNum;
+                } catch (NumberFormatException e) {
+                    yield false;
+                }
+            }
+            case LOGIC -> {
+                if (correctAnswer.equals("TRUE") || correctAnswer.equals("FALSE")) {
+                    yield userAnswer.equals(correctAnswer);
+                }
+                try {
+                    int userNum = Integer.parseInt(userAnswer);
+                    int correctNum = Integer.parseInt(correctAnswer);
+                    yield userNum == correctNum;
+                } catch (NumberFormatException e) {
+                    yield false;
+                }
+            }
+            default -> userAnswer.equals(correctAnswer);
+        };
+
+        if (isCorrect) {
+            soundManager.playSound("start");
+            showSuccessMessage();
             room.setLocked(false);
-            
-            // Close puzzle window
-            Stage stage = (Stage) submitButton.getScene().getWindow();
-            stage.close();
-            
-            // Update game state
             gameController.onPuzzleSolved(room);
+            closePuzzleWindow();
         } else {
-            // Wrong answer
-            answerField.setStyle("-fx-border-color: red;");
-            answerField.setText("");
-            answerField.setPromptText("Try again");
+            soundManager.playSound("character");
+            showErrorMessage();
         }
+    }
+
+    private void showSuccessMessage() {
+        Label successLabel = new Label("Correct! The door is now unlocked.");
+        successLabel.setStyle("-fx-font-size: 18px; -fx-text-fill: #4CAF50; -fx-font-weight: bold;");
+        rootContainer.getChildren().add(successLabel);
+        
+        // Remove the success message after 2 seconds
+        PauseTransition delay = new PauseTransition(Duration.seconds(2));
+        delay.setOnFinished(e -> rootContainer.getChildren().remove(successLabel));
+        delay.play();
+    }
+
+    private void showErrorMessage() {
+        Label errorLabel = new Label("Incorrect. Try again!");
+        errorLabel.setStyle("-fx-font-size: 18px; -fx-text-fill: #f44336; -fx-font-weight: bold;");
+        rootContainer.getChildren().add(errorLabel);
+        
+        // Remove the error message after 2 seconds
+        PauseTransition delay = new PauseTransition(Duration.seconds(2));
+        delay.setOnFinished(e -> rootContainer.getChildren().remove(errorLabel));
+        delay.play();
+        }
+
+    private void closePuzzleWindow() {
+        Stage stage = (Stage) rootContainer.getScene().getWindow();
+        stage.close();
     }
 }

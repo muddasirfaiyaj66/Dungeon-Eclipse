@@ -1,16 +1,19 @@
 package com.dungeon.effects;
 
 import com.dungeon.model.DungeonRoom;
+import com.dungeon.model.Door;
 import javafx.animation.FadeTransition;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.ParallelTransition;
 import javafx.animation.PathTransition;
+import javafx.animation.RotateTransition;
 import javafx.animation.ScaleTransition;
 import javafx.animation.SequentialTransition;
 import javafx.animation.Timeline;
 import javafx.animation.TranslateTransition;
 import javafx.geometry.Point2D;
+import javafx.scene.transform.Rotate;
 import javafx.scene.Node;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -113,56 +116,83 @@ public class EffectsManager {
         // Create black overlay for fade effect
         transitionOverlay.setOpacity(0);
         
-        // Setup fade animations
-        FadeTransition fadeIn = new FadeTransition(Duration.seconds(0.5), transitionOverlay);
+        // Simplified fade animations with shorter duration
+        FadeTransition fadeIn = new FadeTransition(Duration.seconds(0.3), transitionOverlay);
         fadeIn.setFromValue(0);
         fadeIn.setToValue(1);
         
-        FadeTransition fadeOut = new FadeTransition(Duration.seconds(0.5), transitionOverlay);
+        FadeTransition fadeOut = new FadeTransition(Duration.seconds(0.3), transitionOverlay);
         fadeOut.setFromValue(1);
         fadeOut.setToValue(0);
         
-        // Create room type text
+        // Create room type text with simpler effects
         Text roomTypeText = createRoomTypeText(roomType);
         roomTypeText.setOpacity(0);
-        roomTypeText.setScaleX(0.5);
-        roomTypeText.setScaleY(0.5);
         effectsPane.getChildren().add(roomTypeText);
         
-        // Text animations
-        FadeTransition textFadeIn = new FadeTransition(Duration.seconds(0.4), roomTypeText);
+        // Simplified text animations
+        FadeTransition textFadeIn = new FadeTransition(Duration.seconds(0.2), roomTypeText);
         textFadeIn.setFromValue(0);
         textFadeIn.setToValue(1);
         
-        ScaleTransition textScale = new ScaleTransition(Duration.seconds(0.4), roomTypeText);
-        textScale.setFromX(0.5);
-        textScale.setFromY(0.5);
-        textScale.setToX(1.2);
-        textScale.setToY(1.2);
-        
-        FadeTransition textFadeOut = new FadeTransition(Duration.seconds(0.4), roomTypeText);
+        FadeTransition textFadeOut = new FadeTransition(Duration.seconds(0.2), roomTypeText);
         textFadeOut.setFromValue(1);
         textFadeOut.setToValue(0);
-        textFadeOut.setDelay(Duration.seconds(1.0));
+        textFadeOut.setDelay(Duration.seconds(0.5));
         
-        // Execute transition
+        // Execute transition with fewer parallel animations
         SequentialTransition sequentialTransition = new SequentialTransition(
             fadeIn,
-            new ParallelTransition(textFadeIn, textScale),
+            textFadeIn,
             textFadeOut,
             fadeOut
         );
         
-        // Add room-specific effects
+        // Add room-specific effects after transition
         sequentialTransition.setOnFinished(e -> {
             effectsPane.getChildren().remove(roomTypeText);
-            addRoomEnterEffect(roomType);
+            // Simplified room enter effect
+            addSimpleRoomEnterEffect(roomType);
             if (onTransitionComplete != null) {
                 onTransitionComplete.run();
             }
         });
         
         sequentialTransition.play();
+    }
+    
+    private void addSimpleRoomEnterEffect(DungeonRoom.RoomType roomType) {
+        // Simplified room enter effects
+        Rectangle flash = new Rectangle(0, 0, effectsCanvas.getWidth(), effectsCanvas.getHeight());
+        Color flashColor;
+        
+        switch (roomType) {
+            case COMBAT:
+                flashColor = Color.RED;
+                break;
+            case PUZZLE:
+                flashColor = Color.BLUE;
+                break;
+            case TREASURE:
+                flashColor = Color.GOLD;
+                break;
+            case BOSS:
+                flashColor = Color.DARKRED;
+                break;
+            default:
+                flashColor = Color.WHITE;
+        }
+        
+        flash.setFill(flashColor);
+        flash.setOpacity(0.2);
+        effectsPane.getChildren().add(flash);
+        
+        // Simple fade out animation
+        FadeTransition flashFade = new FadeTransition(Duration.seconds(0.3), flash);
+        flashFade.setFromValue(0.2);
+        flashFade.setToValue(0);
+        flashFade.setOnFinished(e -> effectsPane.getChildren().remove(flash));
+        flashFade.play();
     }
     
     private Text createRoomTypeText(DungeonRoom.RoomType roomType) {
@@ -199,11 +229,9 @@ public class EffectsManager {
         text.setFont(Font.font("Arial", FontWeight.BOLD, 36));
         text.setFill(color);
         
-        // Add glow effect
-        Glow glow = new Glow(0.8);
-        DropShadow shadow = new DropShadow(BlurType.GAUSSIAN, color.deriveColor(0, 1, 1, 0.5), 10, 0.5, 0, 0);
-        glow.setInput(shadow);
-        text.setEffect(glow);
+        // Simplified glow effect
+        DropShadow shadow = new DropShadow(BlurType.GAUSSIAN, color, 5, 0.5, 0, 0);
+        text.setEffect(shadow);
         
         // Center the text
         text.setLayoutX((effectsCanvas.getWidth() - text.getLayoutBounds().getWidth()) / 2);
@@ -599,5 +627,93 @@ public class EffectsManager {
             );
             gc.setGlobalAlpha(1.0);
         }
+    }
+    
+    // Add new method for door opening animation
+    public void playDoorOpeningAnimation(Door door) {
+        System.out.println("Playing door animation for door at: " + door.getX() + "," + door.getY());
+        
+        // Create door visual representation with larger size for visibility
+        Rectangle doorVisual = new Rectangle(
+            door.getX(),
+            door.getY(),
+            door.getWidth(),
+            door.getHeight()
+        );
+        doorVisual.setFill(Color.BROWN);
+        doorVisual.setStroke(Color.BLACK);
+        doorVisual.setStrokeWidth(3);
+        
+        // Add door frame
+        Rectangle doorFrame = new Rectangle(
+            door.getX() - 5,
+            door.getY() - 5,
+            door.getWidth() + 10,
+            door.getHeight() + 10
+        );
+        doorFrame.setFill(Color.DARKGRAY);
+        doorFrame.setStroke(Color.BLACK);
+        doorFrame.setStrokeWidth(3);
+        
+        // Add door handle
+        Circle doorHandle = new Circle(
+            door.getX() + door.getWidth() - 15,
+            door.getY() + door.getHeight() / 2,
+            8
+        );
+        doorHandle.setFill(Color.GOLD);
+        doorHandle.setStroke(Color.BLACK);
+        doorHandle.setStrokeWidth(2);
+        
+        // Create a group for the door elements
+        javafx.scene.Group doorGroup = new javafx.scene.Group(doorVisual, doorHandle);
+        doorGroup.setLayoutX(door.getX());
+        doorGroup.setLayoutY(door.getY());
+        
+        // Add all elements to the effects pane
+        effectsPane.getChildren().addAll(doorFrame, doorGroup);
+        
+        // Create door opening animation
+        RotateTransition doorOpen = new RotateTransition(Duration.seconds(0.5), doorGroup);
+        doorOpen.setFromAngle(0);
+        doorOpen.setToAngle(90);
+        doorOpen.setAxis(Rotate.Z_AXIS);
+        
+        // Set the pivot point for rotation (left edge of the door)
+        doorGroup.setTranslateX(0);
+        doorGroup.setTranslateY(door.getHeight() / 2);
+        
+        // Add slight bounce effect
+        ScaleTransition doorBounce = new ScaleTransition(Duration.seconds(0.1), doorGroup);
+        doorBounce.setFromX(1.0);
+        doorBounce.setFromY(1.0);
+        doorBounce.setToX(1.05);
+        doorBounce.setToY(1.05);
+        doorBounce.setAutoReverse(true);
+        doorBounce.setCycleCount(2);
+        
+        // Create sequential animation
+        SequentialTransition sequence = new SequentialTransition(
+            doorBounce,
+            doorOpen
+        );
+        
+        // Add cleanup
+        sequence.setOnFinished(e -> {
+            System.out.println("Door animation finished");
+            effectsPane.getChildren().removeAll(doorFrame, doorGroup);
+        });
+        
+        sequence.play();
+    }
+    
+    // Add method to check if player is near door
+    public boolean isPlayerNearDoor(Point2D playerPosition, Door door) {
+        double distance = playerPosition.distance(
+            door.getX() + door.getWidth() / 2,
+            door.getY() + door.getHeight() / 2
+        );
+        System.out.println("Player distance from door: " + distance);
+        return distance < 150; // Increased detection range for door animation
     }
 }
