@@ -35,6 +35,7 @@ public class VictoryController {
     private String timeElapsed;
     private int enemiesDefeated;
     private int currentLevel;
+    private GameController gameController;
     
     public void setGameStats(int score, String timeElapsed, int enemiesDefeated, int level) {
         this.score = score;
@@ -50,6 +51,10 @@ public class VictoryController {
         
         // Disable next level button if on final level
         nextLevelButton.setDisable(level >= 3);
+    }
+    
+    public void setGameController(GameController gameController) {
+        this.gameController = gameController;
     }
     
     @FXML
@@ -94,27 +99,37 @@ public class VictoryController {
     @FXML
     @SuppressWarnings("unused")
     private void returnToMainMenu() {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/dungeon/fxml/MainMenu.fxml"));
-            Parent menuRoot = loader.load();
-            Scene menuScene = new Scene(menuRoot, 1024, 768);
-            
-            Stage stage = (Stage) mainMenuButton.getScene().getWindow();
-            
-            // Configure stage properties
-            stage.setResizable(true);
-            stage.setMinWidth(800);
-            stage.setMinHeight(600);
-            
-            stage.setScene(menuScene);
-            
-            // Make sure the stage is showing
-            if (!stage.isShowing()) {
+        if (gameController != null) {
+            // Use the consistent method from GameController
+            gameController.returnToMainMenu();
+        } else {
+            // Fallback to original implementation
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/dungeon/fxml/MainMenu.fxml"));
+                Parent menuRoot = loader.load();
+                Scene menuScene = new Scene(menuRoot, 1024, 768);
+                
+                // Add stylesheet
+                try {
+                    menuScene.getStylesheets().add(getClass().getResource("/com/dungeon/styles/main.css").toExternalForm());
+                } catch (Exception e) {
+                    System.out.println("Stylesheet not found: " + e.getMessage());
+                }
+                
+                Stage stage = (Stage) mainMenuButton.getScene().getWindow();
+                
+                // Configure stage properties to match Main.java
+                stage.setResizable(true);
+                stage.setMinWidth(800);
+                stage.setMinHeight(600);
+                stage.centerOnScreen();
+                
+                stage.setScene(menuScene);
                 stage.show();
+            } catch (Exception e) {
+                System.err.println("Error returning to main menu: " + e.getMessage());
+                e.printStackTrace();
             }
-        } catch (Exception e) {
-            System.err.println("Error returning to main menu: " + e.getMessage());
-            e.printStackTrace();
         }
     }
     
