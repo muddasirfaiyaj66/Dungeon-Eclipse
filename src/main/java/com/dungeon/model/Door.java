@@ -15,6 +15,7 @@ public class Door {
     private boolean requiresKey;
     private DungeonRoom connectedRoom;
     private Direction direction;
+    private boolean animationPlaying = false;
 
     public Door(double x, double y, double doorWidth, double doorHeight, DungeonRoom currentRoom, DungeonRoom connectedRoom, DoorDirection direction) {
         this.x = x;
@@ -191,6 +192,13 @@ public class Door {
         return direction;
     }
 
+    public boolean isAnimationPlaying() {
+        return animationPlaying;
+    }
+    
+    public void setAnimationPlaying(boolean animationPlaying) {
+        this.animationPlaying = animationPlaying;
+    }
 
     public enum DoorDirection {WEST, SOUTH, NORTH, EAST}
 }
