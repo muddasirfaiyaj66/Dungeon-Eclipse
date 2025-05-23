@@ -1,23 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<?import javafx.scene.layout.*?>
-<?import javafx.scene.control.*?>
-<?import javafx.scene.text.*?>
-<?import javafx.geometry.Insets?>
-<?import javafx.scene.effect.DropShadow?>
 
-<StackPane xmlns="http://javafx.com/javafx"
-          xmlns:fx="http://javafx.com/fxml"
-          fx:controller="com.dungeon.controllers.GameOverController"
-          styleClass="main-menu-background">
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.effect.DropShadow?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.paint.Color?>
+<?import javafx.scene.text.Text?>
+
+<StackPane styleClass="main-menu-background" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.dungeon.controllers.GameOverController">
           
-    <VBox alignment="CENTER" spacing="30" styleClass="game-over-panel" maxWidth="500" maxHeight="400">
+    <VBox alignment="CENTER" maxHeight="400" maxWidth="500" spacing="30" style="-fx-background-color: black;" styleClass="game-over-panel">
         <padding>
-            <Insets top="30" right="40" bottom="30" left="40" />
+            <Insets bottom="30" left="40" right="40" top="30" />
         </padding>
         
-        <Text text="Game Over" styleClass="title-text">
+        <Text styleClass="title-text" text="Game Over">
             <fill>
-                <javafx.scene.paint.Color red="0.9" green="0.3" blue="0.3" />
+                <javafx.scene.paint.Color blue="0.3" green="0.3" red="0.9" />
             </fill>
             <effect>
                 <DropShadow radius="10" spread="0.4" />
@@ -25,29 +25,29 @@
         </Text>
         
         <VBox alignment="CENTER" spacing="15">
-            <Text fx:id="scoreText" text="Score: 0" styleClass="score-text">
+            <Text fx:id="scoreText" styleClass="score-text" text="Score: 0">
                 <fill>
-                    <javafx.scene.paint.Color red="0.9" green="0.9" blue="0.9" />
+                    <javafx.scene.paint.Color blue="0.9" green="0.9" red="0.9" />
                 </fill>
             </Text>
             
-            <Text fx:id="levelText" text="Levels Completed: 0" styleClass="score-text">
+            <Text fx:id="levelText" styleClass="score-text" text="Levels Completed: 0">
                 <fill>
-                    <javafx.scene.paint.Color red="0.9" green="0.9" blue="0.9" />
+                    <javafx.scene.paint.Color blue="0.9" green="0.9" red="0.9" />
                 </fill>
             </Text>
             
-            <Text fx:id="enemiesText" text="Enemies Defeated: 0" styleClass="score-text">
+            <Text fx:id="enemiesText" styleClass="score-text" text="Enemies Defeated: 0">
                 <fill>
-                    <javafx.scene.paint.Color red="0.9" green="0.9" blue="0.9" />
+                    <javafx.scene.paint.Color blue="0.9" green="0.9" red="0.9" />
                 </fill>
             </Text>
         </VBox>
         
         <VBox alignment="CENTER" spacing="15" styleClass="menu-buttons">
-            <Button fx:id="tryAgainButton" text="Try Again" onAction="#restartGame" styleClass="menu-button" />
-            <Button fx:id="mainMenuButton" text="Main Menu" onAction="#returnToMainMenu" styleClass="menu-button" />
-            <Button fx:id="quitButton" text="Quit Game" onAction="#quitGame" styleClass="menu-button" />
+            <Button fx:id="tryAgainButton" onAction="#restartGame" style="-fx-background-color: crimson;" styleClass="menu-button" text="Try Again" />
+            <Button fx:id="mainMenuButton" onAction="#returnToMainMenu" style="-fx-background-color: crimson;" styleClass="menu-button" text="Main Menu" />
+            <Button fx:id="quitButton" onAction="#quitGame" style="-fx-background-color: crimson;" styleClass="menu-button" text="Quit Game" />
         </VBox>
     </VBox>
-</StackPane> 
+</StackPane>

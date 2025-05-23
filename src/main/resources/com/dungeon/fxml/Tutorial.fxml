@@ -1,26 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<?import javafx.scene.layout.*?>
-<?import javafx.scene.control.*?>
-<?import javafx.scene.text.*?>
-<?import javafx.geometry.Insets?>
-<?import javafx.scene.effect.DropShadow?>
-<?import javafx.scene.image.ImageView?>
-<?import javafx.scene.image.Image?>
 
-<BorderPane xmlns="http://javafx.com/javafx"
-          xmlns:fx="http://javafx.com/fxml"
-          fx:controller="com.dungeon.controllers.TutorialController"
-          styleClass="main-menu-background">
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.effect.DropShadow?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Text?>
+
+<BorderPane styleClass="main-menu-background" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.dungeon.controllers.TutorialController">
     
     <top>
-        <VBox alignment="CENTER" spacing="10">
+        <VBox alignment="CENTER" spacing="10" style="-fx-background-color: pink;">
             <padding>
-                <Insets top="20" bottom="10" />
+                <Insets bottom="10" top="20" />
             </padding>
-            <Text text="How to Play" styleClass="title-text">
-                <fill>
-                    <javafx.scene.paint.Color red="0.9" green="0.7" blue="0.1" />
-                </fill>
+            <Text fill="#011b048a" styleClass="title-text" text="How to Play">
                 <effect>
                     <DropShadow radius="5" spread="0.2" />
                 </effect>
@@ -30,44 +29,53 @@
     
     <center>
         <ScrollPane fitToWidth="true" styleClass="tutorial-scroll">
-            <VBox spacing="20" styleClass="tutorial-content">
+            <VBox spacing="20" style="-fx-background-color: lavender;" styleClass="tutorial-content">
                 <padding>
-                    <Insets top="20" right="30" bottom="20" left="30" />
+                    <Insets bottom="20" left="30" right="30" top="20" />
                 </padding>
                 
                 <VBox styleClass="tutorial-section">
-                    <Text text="Controls" styleClass="section-title" />
+                    <Text styleClass="section-title" text="Controls" />
                     <GridPane hgap="15" vgap="10">
                         <columnConstraints>
                             <ColumnConstraints hgrow="NEVER" minWidth="100" />
                             <ColumnConstraints hgrow="ALWAYS" />
                         </columnConstraints>
                         
-                        <Text text="W, A, S, D" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="key-text" />
-                        <Text text="Move character" GridPane.rowIndex="0" GridPane.columnIndex="1" />
+                        <Text styleClass="key-text" text="W, A, S, D" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                        <Text text="Move character" GridPane.columnIndex="1" GridPane.rowIndex="0" />
                         
-                        <Text text="Mouse" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="key-text" />
-                        <Text text="Aim weapons and abilities" GridPane.rowIndex="1" GridPane.columnIndex="1" />
+                        <Text styleClass="key-text" text="Mouse" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                        <Text text="Aim weapons and abilities" GridPane.columnIndex="1" GridPane.rowIndex="1" />
                         
-                        <Text text="Left Click" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="key-text" />
-                        <Text text="Attack" GridPane.rowIndex="2" GridPane.columnIndex="1" />
+                        <Text styleClass="key-text" text="Left Click" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                        <Text text="Attack" GridPane.columnIndex="1" GridPane.rowIndex="2" />
                         
-                        <Text text="E" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="key-text" />
-                        <Text text="Interact with objects, doors, and puzzles" GridPane.rowIndex="3" GridPane.columnIndex="1" />
+                        <Text styleClass="key-text" text="E" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+                        <Text text="Interact with objects, doors, and puzzles" GridPane.columnIndex="1" GridPane.rowIndex="3" />
                         
-                        <Text text="I" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="key-text" />
-                        <Text text="Open inventory" GridPane.rowIndex="4" GridPane.columnIndex="1" />
+                        <Text styleClass="key-text" text="I" GridPane.columnIndex="0" GridPane.rowIndex="4" />
+                        <Text text="Open inventory" GridPane.columnIndex="1" GridPane.rowIndex="4" />
                         
-                        <Text text="ESC" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="key-text" />
-                        <Text text="Pause game" GridPane.rowIndex="5" GridPane.columnIndex="1" />
+                        <Text styleClass="key-text" text="ESC" GridPane.columnIndex="0" GridPane.rowIndex="5" />
+                        <Text text="Pause game" GridPane.columnIndex="1" GridPane.rowIndex="5" />
                         
-                        <Text text="1-5" GridPane.rowIndex="6" GridPane.columnIndex="0" styleClass="key-text" />
-                        <Text text="Switch weapons" GridPane.rowIndex="6" GridPane.columnIndex="1" />
+                        <Text styleClass="key-text" text="1-5" GridPane.columnIndex="0" GridPane.rowIndex="6" />
+                        <Text text="Switch weapons" GridPane.columnIndex="1" GridPane.rowIndex="6" />
+                  <rowConstraints>
+                     <RowConstraints />
+                     <RowConstraints />
+                     <RowConstraints />
+                     <RowConstraints />
+                     <RowConstraints />
+                     <RowConstraints />
+                     <RowConstraints />
+                  </rowConstraints>
                     </GridPane>
                 </VBox>
                 
                 <VBox styleClass="tutorial-section">
-                    <Text text="Game Mechanics" styleClass="section-title" />
+                    <Text styleClass="section-title" text="Game Mechanics" />
                     <Text text="◆ Each playthrough features a unique procedurally generated dungeon." wrappingWidth="700" />
                     <Text text="◆ Explore rooms, battle enemies, and collect treasures." wrappingWidth="700" />
                     <Text text="◆ Solve puzzles to unlock paths and discover secrets." wrappingWidth="700" />
@@ -76,29 +84,29 @@
                 </VBox>
                 
                 <VBox styleClass="tutorial-section">
-                    <Text text="Room Types" styleClass="section-title" />
+                    <Text styleClass="section-title" text="Room Types" />
                     <HBox spacing="20">
                         <VBox alignment="TOP_CENTER" styleClass="room-type">
-                            <Text text="Combat Rooms" styleClass="room-type-title" />
+                            <Text styleClass="room-type-title" text="Combat Rooms" />
                             <Text text="Defeat all enemies to progress" textAlignment="CENTER" wrappingWidth="150" />
                         </VBox>
                         <VBox alignment="TOP_CENTER" styleClass="room-type">
-                            <Text text="Puzzle Rooms" styleClass="room-type-title" />
+                            <Text styleClass="room-type-title" text="Puzzle Rooms" />
                             <Text text="Solve the puzzle to unlock doors" textAlignment="CENTER" wrappingWidth="150" />
                         </VBox>
                         <VBox alignment="TOP_CENTER" styleClass="room-type">
-                            <Text text="Treasure Rooms" styleClass="room-type-title" />
+                            <Text styleClass="room-type-title" text="Treasure Rooms" />
                             <Text text="Collect valuable items and power-ups" textAlignment="CENTER" wrappingWidth="150" />
                         </VBox>
                         <VBox alignment="TOP_CENTER" styleClass="room-type">
-                            <Text text="Boss Rooms" styleClass="room-type-title" />
+                            <Text styleClass="room-type-title" text="Boss Rooms" />
                             <Text text="Defeat the powerful boss to complete the level" textAlignment="CENTER" wrappingWidth="150" />
                         </VBox>
                     </HBox>
                 </VBox>
                 
                 <VBox styleClass="tutorial-section">
-                    <Text text="Tips" styleClass="section-title" />
+                    <Text styleClass="section-title" text="Tips" />
                     <Text text="◆ Look for health potions to restore your health." wrappingWidth="700" />
                     <Text text="◆ Keys are required to unlock certain doors." wrappingWidth="700" />
                     <Text text="◆ Some enemies have special abilities - observe their attack patterns." wrappingWidth="700" />
@@ -110,11 +118,11 @@
     </center>
     
     <bottom>
-        <HBox alignment="CENTER" spacing="20">
+        <HBox alignment="CENTER" spacing="20" style="-fx-background-color: black;">
             <padding>
-                <Insets top="10" right="20" bottom="20" left="20" />
+                <Insets bottom="20" left="20" right="20" top="10" />
             </padding>
-            <Button fx:id="closeButton" text="Close" onAction="#closeWindow" styleClass="menu-button" />
+            <Button fx:id="closeButton" onAction="#closeWindow" style="-fx-background-color: crimson;" styleClass="menu-button" text="Close" />
         </HBox>
     </bottom>
-</BorderPane> 
+</BorderPane>
