@@ -1,25 +1,34 @@
 package com.dungeon.controllers;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+
+import com.dungeon.audio.SoundManager;
 import com.dungeon.effects.EffectsManager;
+import com.dungeon.model.Door;
 import com.dungeon.model.DungeonGenerator;
 import com.dungeon.model.DungeonRoom;
+import com.dungeon.model.Item;
+import com.dungeon.model.Puzzle;
 import com.dungeon.model.entity.Enemy;
 import com.dungeon.model.entity.EnemyAbility;
 import com.dungeon.model.entity.Entity;
-import com.dungeon.model.Door; 
-import com.dungeon.model.Inventory;
-import com.dungeon.model.Item;
 import com.dungeon.model.entity.Player;
 import com.dungeon.model.entity.Projectile;
 import com.dungeon.model.entity.ProjectileAttack;
-import com.dungeon.model.Puzzle;
 import com.dungeon.view.DungeonRenderer;
 import com.dungeon.view.LightingEffect;
+
 import javafx.animation.AnimationTimer;
-import javafx.animation.PauseTransition;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
-import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
@@ -30,28 +39,17 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
-import javafx.scene.layout.VBox;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle; 
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.scene.text.TextAlignment;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.util.Duration;
-import javafx.scene.text.Font;
-import javafx.scene.text.FontWeight;
-import javafx.scene.text.TextAlignment;
-import javafx.application.Platform;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
-import com.dungeon.audio.SoundManager;
 
 public class GameController {
     // Enum for door directions
@@ -2624,6 +2622,7 @@ public void interactWithPuzzle() {
             // Transition to game over screen
             Stage stage = (Stage) gameCanvas.getScene().getWindow();
             stage.setScene(gameOverScene);
+            
             stage.show();
             
             System.out.println("Game over screen displayed");
