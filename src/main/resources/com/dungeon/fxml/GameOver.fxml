@@ -15,6 +15,7 @@
     <!-- Centered panel with fixed max size -->
     <VBox alignment="CENTER" maxHeight="588.0" maxWidth="775.0" prefHeight="588.0" prefWidth="766.0" spacing="30" style="-fx-background-color: black;" styleClass="game-over-panel" StackPane.alignment="CENTER">
 
+
         <padding>
             <Insets bottom="30" left="40" right="40" top="30" />
         </padding>
