@@ -1,21 +1,23 @@
 package com.dungeon.model.entity;
-
-import javafx.geometry.Point2D;
-import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.input.KeyCode;
-import javafx.scene.paint.Color;
-import java.util.Set;
-import java.util.HashSet;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+
+import com.dungeon.model.Armor;
 import com.dungeon.model.Inventory;
 import com.dungeon.model.Item;
-import com.dungeon.model.Weapon;
-import com.dungeon.model.Armor;
+
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
+import javafx.geometry.Point2D;
+import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.image.Image;
+import javafx.scene.input.KeyCode;
+import javafx.scene.paint.Color;
 
 public class Player extends Entity {
+    private Image playerImage;
     private static final double DEFAULT_HEALTH = 100;
     private static final double DEFAULT_SPEED = 200; // pixels per second
     private static final double DEFAULT_SIZE = 30;
@@ -108,7 +110,23 @@ public class Player extends Entity {
 
     public Player(double x, double y) {
         super(x, y, DEFAULT_HEALTH, DEFAULT_SPEED, DEFAULT_SIZE);
-        
+         try {
+            // Load the player image from resources
+          playerImage = new Image(
+    getClass().getResourceAsStream("/com/dungeon/assets/images/player.png"),
+    64,   // width
+    64,   // height
+    true, // preserve ratio
+    true  // smooth
+);
+this.size = 64;
+
+            // Adjust size to match image dimensions if needed
+            this.size = Math.max(playerImage.getWidth(), playerImage.getHeight());
+        } catch (Exception e) {
+            System.err.println("Error loading player image: " + e.getMessage());
+            playerImage = null; 
+        }
         // Initialize combat
         this.projectiles = new HashSet<>();
         this.attackCooldown = 0;
@@ -234,6 +252,38 @@ public class Player extends Entity {
 
     @Override
     public void render(GraphicsContext gc) {
+        
+        if (playerImage != null) {
+        // Draw the player image
+        double rotation = Math.toDegrees(Math.atan2(aimDirection.getY(), aimDirection.getX()));
+        
+        // Save the current graphics context state
+        gc.save();
+        
+        // Translate to player center, rotate, then draw centered
+        double centerX = position.getX() + size / 2;
+        double centerY = position.getY() + size / 2;
+        
+        gc.translate(centerX, centerY);
+        gc.rotate(rotation);
+        gc.drawImage(playerImage, -size/2, -size/2, size, size);
+        
+        // Restore the graphics context state
+        gc.restore();
+        
+        // If melee attacking, you might still want to show some effect
+        if (isMeleeAttacking) {
+            Weapon currentWeapon = weapons.get(currentWeaponIndex);
+            gc.setStroke(currentWeapon.getColor());
+            gc.setLineWidth(3);
+            gc.strokeLine(
+                centerX,
+                centerY,
+                centerX + aimDirection.getX() * size * 1.5,
+                centerY + aimDirection.getY() * size * 1.5
+            );
+        }
+    } else {
         // Get current weapon for coloring
         Weapon currentWeapon = weapons.get(currentWeaponIndex);
         
@@ -278,12 +328,17 @@ public class Player extends Entity {
                 centerY + aimDirection.getY() * size * 1.5
             );
         }
+    }
+        
         
         // Draw projectiles
         for (ProjectileAttack projectile : projectiles) {
             projectile.render(gc);
         }
     }
+
+
+
 
     // Inventory methods
     public boolean addItem(Item item) {
