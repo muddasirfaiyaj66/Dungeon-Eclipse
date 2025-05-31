@@ -397,15 +397,19 @@ public class GameController {
         
         setupGame();
         startGameLoop();
+        
+        gc = gameCanvas.getGraphicsContext2D();
+        loadEnemyImages();
+        loadWeaponImages();
     }
 
     private void loadEnemyImages() {
         try {
-            enemyImages.put(Enemy.EnemyType.GOBLIN, new javafx.scene.image.Image(getClass().getResourceAsStream("/com/dungeon/assets/images/goblin.jpeg")));
-            enemyImages.put(Enemy.EnemyType.SKELETON, new javafx.scene.image.Image(getClass().getResourceAsStream("/com/dungeon/assets/images/skeleton.jpeg")));
-            enemyImages.put(Enemy.EnemyType.ORC, new javafx.scene.image.Image(getClass().getResourceAsStream("/com/dungeon/assets/images/orc.jpeg")));
-            enemyImages.put(Enemy.EnemyType.MAGE, new javafx.scene.image.Image(getClass().getResourceAsStream("/com/dungeon/assets/images/mage.jpeg")));
-            enemyImages.put(Enemy.EnemyType.BOSS, new javafx.scene.image.Image(getClass().getResourceAsStream("/com/dungeon/assets/images/boss.jpeg")));
+            enemyImages.put(Enemy.EnemyType.GOBLIN, new javafx.scene.image.Image(getClass().getResourceAsStream("/com/dungeon/assets/images/goblin.png")));
+            enemyImages.put(Enemy.EnemyType.SKELETON, new javafx.scene.image.Image(getClass().getResourceAsStream("/com/dungeon/assets/images/skeleton.png")));
+            enemyImages.put(Enemy.EnemyType.ORC, new javafx.scene.image.Image(getClass().getResourceAsStream("/com/dungeon/assets/images/orc.png")));
+            enemyImages.put(Enemy.EnemyType.MAGE, new javafx.scene.image.Image(getClass().getResourceAsStream("/com/dungeon/assets/images/mage.png")));
+            enemyImages.put(Enemy.EnemyType.BOSS, new javafx.scene.image.Image(getClass().getResourceAsStream("/com/dungeon/assets/images/boss.png")));
         } catch (Exception e) {
             System.err.println("Error loading enemy images: " + e.getMessage());
             e.printStackTrace();
@@ -964,7 +968,10 @@ public class GameController {
                 player.getPosition().distance(new Point2D(item.getX(), item.getY())) < 100) {
                 gc.setFill(Color.WHITE);
                 gc.setFont(Font.font("Verdana", FontWeight.NORMAL, 10));
-                gc.fillText(item.getName(), item.getX() - 20, item.getY() - 10);
+                gc.setTextAlign(TextAlignment.CENTER); // Center align text
+                gc.fillText(item.getName(), 
+                    item.getX(), // Center X position
+                    item.getY() - 10); // Position above item
             }
         }
         
@@ -981,21 +988,29 @@ public class GameController {
                 if (enemyImage != null) {
                     // Calculate enemy size
                     double size = enemy.getSize();
-                    if (enemy.getType() == Enemy.EnemyType.BOSS) {
+                if (enemy.getType() == Enemy.EnemyType.BOSS) {
                         size *= 1.5; // Make boss larger
                     }
                     
                     // Calculate rotation angle based on movement direction
                     double angle = 0;
-                    if (enemy.getVelocity() != null) {
-                        angle = Math.toDegrees(Math.atan2(enemy.getVelocity().getY(), enemy.getVelocity().getX()));
+                    Point2D velocity = enemy.getVelocity();
+                    if (velocity != null && (Math.abs(velocity.getX()) > 0.1 || Math.abs(velocity.getY()) > 0.1)) {
+                        // Calculate angle based on velocity direction
+                        angle = Math.toDegrees(Math.atan2(velocity.getY(), velocity.getX()));
+                } else {
+                        // If no significant velocity, calculate angle based on direction to player
+                        Point2D playerCenter = player.getPosition().add(player.getSize() / 2, player.getSize() / 2);
+                        Point2D enemyCenter = enemy.getPosition().add(enemy.getSize() / 2, enemy.getSize() / 2);
+                        Point2D direction = playerCenter.subtract(enemyCenter);
+                        angle = Math.toDegrees(Math.atan2(direction.getY(), direction.getX()));
                     }
                     
                     // Save the current graphics context state
                     gc.save();
                     
                     // Translate to enemy center
-                    gc.translate(enemy.getX(), enemy.getY());
+                    gc.translate(enemy.getX() + enemy.getSize()/2, enemy.getY() + enemy.getSize()/2);
                     
                     // Rotate around the center
                     gc.rotate(angle);
@@ -1016,19 +1031,21 @@ public class GameController {
                     double healthBarX = enemy.getX() - healthBarWidth/2;
                     
                     // Health bar background
-                    gc.setFill(Color.BLACK);
+                gc.setFill(Color.BLACK);
                     gc.fillRect(healthBarX, healthBarY, healthBarWidth, healthBarHeight);
                     
                     // Health bar foreground
                     double healthPercentage = (double) enemy.getHealth() / enemy.getMaxHealth();
-                    gc.setFill(Color.GREEN);
+                gc.setFill(Color.GREEN);
                     gc.fillRect(healthBarX, healthBarY, healthBarWidth * healthPercentage, healthBarHeight);
-                    
+                
                     // Draw enemy type above health bar
-                    gc.setFill(Color.WHITE);
-                    gc.setFont(Font.font("Verdana", FontWeight.NORMAL, 10));
-                    gc.setTextAlign(TextAlignment.CENTER);
-                    gc.fillText(enemy.getType().toString(), enemy.getX(), healthBarY - 5);
+                gc.setFill(Color.WHITE);
+                gc.setFont(Font.font("Verdana", FontWeight.NORMAL, 10));
+                gc.setTextAlign(TextAlignment.CENTER); // Center align text
+                gc.fillText(enemy.getType().toString(), 
+                    enemy.getX() + enemy.getSize()/2, // Center X position
+                    healthBarY - 5); // Position above health bar
                 } else {
                     // Fallback to colored rectangle if image not found
                     if (enemy.getType() == Enemy.EnemyType.BOSS) {
@@ -1382,12 +1399,29 @@ public class GameController {
         gc.setFont(Font.font("Verdana", FontWeight.BOLD, 14));
         
         // Create a semi-transparent background for the stats
+        double padding = 10;
+        double boxWidth = 200;
+        double boxHeight = 120;
+        double boxX = padding;
+        double boxY = padding;
+        
+        // Draw background box
         gc.setFill(Color.rgb(0, 0, 0, 0.7));
-        gc.fillRect(10, 10, 200, 120);
+        gc.fillRect(boxX, boxY, boxWidth, boxHeight);
+        
+        // Draw border around the box
+        gc.setStroke(Color.WHITE);
+        gc.setLineWidth(1);
+        gc.strokeRect(boxX, boxY, boxWidth, boxHeight);
         
         // Health bar background
+        double healthBarX = boxX + padding;
+        double healthBarY = boxY + padding;
+        double healthBarWidth = boxWidth - (padding * 2);
+        double healthBarHeight = 15;
+        
         gc.setFill(Color.DARKRED);
-        gc.fillRect(20, 20, 180, 15);
+        gc.fillRect(healthBarX, healthBarY, healthBarWidth, healthBarHeight);
         
         // Health bar foreground with smooth color transition
         double healthPercentage = player.getHealth() / player.getMaxHealth();
@@ -1400,24 +1434,31 @@ public class GameController {
             healthColor = Color.RED;
         }
         gc.setFill(healthColor);
-        gc.fillRect(20, 20, 180 * healthPercentage, 15);
+        gc.fillRect(healthBarX, healthBarY, healthBarWidth * healthPercentage, healthBarHeight);
         
         // Health text
         gc.setFill(Color.WHITE);
-        gc.fillText("HP: " + (int)player.getHealth() + "/" + (int)player.getMaxHealth(), 25, 35);
+        gc.setTextAlign(TextAlignment.LEFT);
+        gc.fillText("HP: " + (int)player.getHealth() + "/" + (int)player.getMaxHealth(), 
+            healthBarX, healthBarY + healthBarHeight + 15);
         
         // Score
-        gc.fillText("Score: " + (int)player.getScore(), 25, 60);
+        gc.fillText("Score: " + (int)player.getScore(), 
+            healthBarX, healthBarY + healthBarHeight + 35);
         
         // Level
-        gc.fillText("Level: " + currentLevel, 25, 85);
+        gc.fillText("Level: " + currentLevel, 
+            healthBarX, healthBarY + healthBarHeight + 55);
         
         // Enemies defeated
-        gc.fillText("Enemies Defeated: " + enemiesDefeated, 25, 110);
+        gc.fillText("Enemies Defeated: " + enemiesDefeated, 
+            healthBarX, healthBarY + healthBarHeight + 75);
         
         // Controls help at bottom
         gc.setFill(Color.LIGHTBLUE);
-        gc.fillText("WASD: Move | E: Shoot | Space: Melee | F: Interact | I: Inventory", 10, gameCanvas.getHeight() - 20);
+        gc.setTextAlign(TextAlignment.LEFT);
+        gc.fillText("WASD: Move | E: Shoot | Space: Melee | F: Interact | I: Inventory", 
+            padding, gameCanvas.getHeight() - 20);
     }
 
     public Player getPlayer() {
@@ -1801,73 +1842,89 @@ public class GameController {
     }
 
     private void spawnWeapon(Point2D position) {
-            String[] weapons = {"Iron Sword", "Steel Sword", "Magic Sword", "Legendary Blade"};
-            int weaponIndex = Math.min(currentLevel - 1, weapons.length - 1);
-        String name = weapons[weaponIndex];
-        String description = "A powerful weapon";
-        int value = 15 * currentLevel;
+        // Randomly select a weapon type
+        Weapon.WeaponType[] weaponTypes = Weapon.WeaponType.values();
+        Weapon.WeaponType randomType = weaponTypes[(int)(Math.random() * weaponTypes.length)];
         
-        Item weapon = new Item(name, description, Item.ItemType.WEAPON, value, false);
+        // Create weapon with matching name and type
+        Weapon weapon = new Weapon(
+            randomType.name(), // Use enum name as weapon name
+            "A " + randomType.name().toLowerCase() + " for combat", // Basic description
+            20, // Base damage
+            randomType
+        );
+        
+        // Set position and size
         weapon.setX(position.getX());
         weapon.setY(position.getY());
         weapon.setSize(20);
+        
         roomItems.add(weapon);
     }
     
     private void spawnArmor(Point2D position) {
-            String[] armors = {"Leather Armor", "Chain Mail", "Plate Armor", "Magic Armor"};
-            int armorIndex = Math.min(currentLevel - 1, armors.length - 1);
-        String name = armors[armorIndex];
-        String description = "Provides protection";
-        int value = 20 * currentLevel;
+        // Randomly select an armor type
+        Armor.ArmorType[] armorTypes = Armor.ArmorType.values();
+        Armor.ArmorType randomType = armorTypes[(int)(Math.random() * armorTypes.length)];
         
-        Item armor = new Item(name, description, Item.ItemType.ARMOR, value, false);
+        // Create armor with matching name and type
+        Armor armor = new Armor(
+            randomType.name(), // Use enum name as armor name
+            "A " + randomType.name().toLowerCase() + " for protection", // Basic description
+            15, // Base defense
+            randomType
+        );
+        
+        // Set position and size
         armor.setX(position.getX());
         armor.setY(position.getY());
         armor.setSize(20);
-        roomItems.add(armor);
-        }
         
+        roomItems.add(armor);
+    }
+    
     private void spawnPotion(Point2D position) {
-        String name = "Health Potion";
-        String description = "Restores " + (20 * currentLevel) + " health";
-        int value = 20 * currentLevel;
+        String[] potionTypes = {"Health", "Strength", "Speed"};
+        String type = potionTypes[(int)(Math.random() * potionTypes.length)];
+        String name = type + " Potion";
+        String description = "A potion that restores " + type.toLowerCase() + ".";
+        int value = 20;
         
         Item potion = new Item(name, description, Item.ItemType.POTION, value, true);
         potion.setX(position.getX());
         potion.setY(position.getY());
         potion.setSize(20);
+        
         roomItems.add(potion);
     }
 
     private void spawnItems(DungeonRoom room) {
-        Random random = new Random();
-        int itemCount = 0;
-        
-        // Determine number of items based on room type
-        switch (room.getType()) {
-            case COMBAT:
-                itemCount = random.nextInt(2); // 0-1 items
+        if (room.getType() == DungeonRoom.RoomType.TREASURE) {
+            // Get random positions for items
+            Point2D weaponPos = getRandomRoomPosition();
+            Point2D armorPos = getRandomRoomPosition();
+            Point2D potionPos = getRandomRoomPosition();
+            
+            // Spawn one of each item type
+            spawnWeapon(weaponPos);
+            spawnArmor(armorPos);
+            spawnPotion(potionPos);
+        } else if (room.getType() == DungeonRoom.RoomType.PUZZLE) {
+            // Spawn a single random item in puzzle rooms
+            Point2D itemPos = getRandomRoomPosition();
+            int itemType = (int)(Math.random() * 3); // 0: weapon, 1: armor, 2: potion
+            
+            switch (itemType) {
+                case 0:
+                    spawnWeapon(itemPos);
                 break;
-            case PUZZLE:
-                itemCount = 1; // Always spawn a key
-                // Add a key to unlock doors
-                placeKeyInRoom(room);
+                case 1:
+                    spawnArmor(itemPos);
                 break;
-            case TREASURE:
-                itemCount = random.nextInt(3) + 2; // 2-4 items
+                case 2:
+                    spawnPotion(itemPos);
                 break;
-            case BOSS:
-                itemCount = random.nextInt(2) + 1; // 1-2 special items
-                break;
-            case SPAWN:
-                // No items in spawn room
-                return;
-        }
-        
-        // Add random items
-        for (int i = 0; i < itemCount; i++) {
-            addItemToRoom(room);
+            }
         }
     }
     
@@ -2117,20 +2174,6 @@ public class GameController {
             // Reset room cleared state
             roomCleared = false;
             
-            // Debug print room transition
-            System.out.println("Transitioning to room type: " + newRoom.getType() + 
-                             ", Rooms cleared in level: " + roomsClearedInLevel);
-            
-            // If entering a puzzle room, ensure a puzzle exists
-            if (newRoom.getType() == DungeonRoom.RoomType.PUZZLE) {
-                System.out.println("Entering puzzle room - checking for puzzle");
-                if (!puzzles.containsKey(newRoom)) {
-                    System.out.println("Creating new puzzle for room");
-                    puzzles.put(newRoom, Puzzle.createRandomPuzzle());
-                }
-                System.out.println("Puzzle exists: " + (puzzles.get(newRoom) != null));
-            }
-            
             // Populate new room
             populateRoom(currentRoom);
             
@@ -2139,6 +2182,9 @@ public class GameController {
             
             // Update minimap
             updateMinimap();
+            
+            // Force a render to ensure all text positions are updated
+            render();
             
             // Ensure canvas has focus
             gameCanvas.requestFocus();
@@ -2363,7 +2409,7 @@ public class GameController {
             if (isBouncingBack) {
                 // Move enemy away from player during bounce-back
                 Point2D bounceDirection = enemyCenter.subtract(playerCenter).normalize();
-                double bounceSpeed = 100 * 0.5; // Slower speed during bounce
+                double bounceSpeed = 50 * 0.5; // Reduced base speed during bounce
                 double dx = bounceDirection.getX() * bounceSpeed * deltaTime;
                 double dy = bounceDirection.getY() * bounceSpeed * deltaTime;
                 
@@ -2389,7 +2435,8 @@ public class GameController {
                 // Normal movement towards player
                 if (distanceToPlayer > enemy.getSize() + player.getSize() + 5) {
                     Point2D direction = playerCenter.subtract(enemyCenter).normalize();
-                    double speed = 100 * (1.0 + (currentLevel - 1) * 0.3); // Base speed with level scaling
+                    double baseSpeed = 50; // Reduced base speed from 100 to 50
+                    double speed = baseSpeed * (1.0 + (currentLevel - 1) * 0.3); // Keep level scaling
                     
                     // Increase speed and approach tendency for boss
                     if (enemy.getType() == Enemy.EnemyType.BOSS) {
@@ -2397,6 +2444,9 @@ public class GameController {
                         // Add a stronger tendency to approach the player
                         direction = direction.multiply(1.5); // Increase movement force towards player
                     }
+                    
+                    // Set velocity for proper rotation
+                    enemy.setVelocity(direction.multiply(speed));
                     
                     double dx = direction.getX() * speed * 0.3 * deltaTime;
                     double dy = direction.getY() * speed * 0.3 * deltaTime;
@@ -2419,6 +2469,10 @@ public class GameController {
                     );
                     
                     enemy.setPosition(newPosition);
+                } else {
+                    // When enemy is close to player, still maintain direction for rotation
+                    Point2D direction = playerCenter.subtract(enemyCenter).normalize();
+                    enemy.setVelocity(direction.multiply(0.1)); // Small velocity to maintain direction
                 }
                 
                 // Boss projectile attack logic
@@ -2491,7 +2545,7 @@ public class GameController {
                 }
             }
         }
-    }
+}
 
     private double calculateEnemyDamage(Enemy enemy) {
         // Base damage for each enemy type
@@ -2520,9 +2574,9 @@ public class GameController {
         double randomFactor = 0.8 + (random.nextDouble() * 0.4);
         
         return baseDamage * levelMultiplier * randomFactor;
-    }
+}
 
-    private void updateProjectiles(double deltaTime) {
+private void updateProjectiles(double deltaTime) {
         Iterator<Projectile> iterator = projectiles.iterator();
         while (iterator.hasNext()) {
             Projectile projectile = iterator.next();
@@ -2583,9 +2637,9 @@ public class GameController {
         double dy = pos1.getY() - pos2.getY();
         double distance = Math.sqrt(dx * dx + dy * dy);
         return distance < (size1 + size2) / 2;
-    }
+}
 
-    private void updateMinimap() {
+private void updateMinimap() {
         // Simplified minimap implementation without creating a separate UI component
         // Draw minimap directly on the canvas in the corner
         
@@ -2666,7 +2720,7 @@ public class GameController {
         }
     }
 
-    public void openInventory() {
+public void openInventory() {
         try {
             // Load the inventory FXML
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/dungeon/fxml/Inventory.fxml"));
@@ -2705,144 +2759,144 @@ public class GameController {
             System.err.println("Error opening inventory: " + e.getMessage());
             e.printStackTrace();
         }
-    }
+}
 
-    public void interactWithPuzzle() {
-            // Only interact if we're in a puzzle room
-            if (currentRoom == null || currentRoom.getType() != DungeonRoom.RoomType.PUZZLE) {
-                System.out.println("Not in a puzzle room");
-                return;
-            }
-            
-            // Get the puzzle for this room
-            Puzzle puzzle = puzzles.get(currentRoom);
-            if (puzzle == null) {
-                System.out.println("No puzzle found for this room");
-                return;
-            }
-            
-            if (puzzle.isSolved()) {
-                System.out.println("Puzzle already solved");
-                return;
-            }
-            
-            // Create puzzle window programmatically
-            try {
-                System.out.println("Creating puzzle window...");
-                
-                // Create root container
-                VBox rootContainer = new VBox(20);
-                rootContainer.setAlignment(Pos.CENTER);
-                rootContainer.setStyle("-fx-background-color: rgba(0, 0, 0, 0.9); -fx-padding: 20; -fx-background-radius: 10;");
-                
-                // Create title
-                Label titleLabel = new Label("Puzzle Room");
-                titleLabel.setStyle("-fx-font-size: 24px; -fx-text-fill: white; -fx-font-weight: bold;");
-                
-                // Create description
-                Label descriptionLabel = new Label(puzzle.getDescription());
-                descriptionLabel.setStyle("-fx-font-size: 16px; -fx-text-fill: #CCCCCC;");
-                descriptionLabel.setWrapText(true);
-                descriptionLabel.setMaxWidth(400);
-                
-                // Create question label
-                Label questionLabel = new Label(puzzle.getQuestion());
-                questionLabel.setStyle("-fx-font-size: 18px; -fx-text-fill: #FFD700; -fx-font-weight: bold;");
-                questionLabel.setWrapText(true);
-                questionLabel.setMaxWidth(400);
-                
-                // Create answer field
-                TextField answerField = new TextField();
-                answerField.setPromptText("Enter your answer");
-                answerField.setMaxWidth(300);
-                answerField.setStyle("-fx-background-color: rgba(255, 255, 255, 0.9); -fx-font-size: 16px; -fx-padding: 8;");
-                
-                // Create feedback label
-                Label feedbackLabel = new Label("");
-                feedbackLabel.setStyle("-fx-font-size: 16px; -fx-text-fill: white;");
-                feedbackLabel.setWrapText(true);
-                feedbackLabel.setMaxWidth(400);
-                
-                // Create submit button
-                Button submitButton = new Button("Submit");
-                submitButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 16px; -fx-padding: 10 20; -fx-background-radius: 5;");
-                submitButton.setOnMouseEntered(e -> submitButton.setStyle("-fx-background-color: #45a049; -fx-text-fill: white; -fx-font-size: 16px; -fx-padding: 10 20; -fx-background-radius: 5;"));
-                submitButton.setOnMouseExited(e -> submitButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 16px; -fx-padding: 10 20; -fx-background-radius: 5;"));
-                
-                // Add components to container
-                rootContainer.getChildren().addAll(titleLabel, descriptionLabel, questionLabel, answerField, feedbackLabel, submitButton);
-                
-                // Create the scene
-                Scene scene = new Scene(rootContainer);
-                
-                // Create the stage
-                Stage puzzleStage = new Stage();
-                puzzleStage.initModality(Modality.APPLICATION_MODAL);
-                puzzleStage.initStyle(StageStyle.UNDECORATED);
-                puzzleStage.setScene(scene);
-                
-                // Center the stage
-                puzzleStage.centerOnScreen();
-                
-                // Handle answer submission
-                submitButton.setOnAction(e -> {
-                    String userAnswer = answerField.getText().trim();
-                    if (userAnswer.isEmpty()) {
-                        feedbackLabel.setText("Please enter an answer");
-                        feedbackLabel.setStyle("-fx-text-fill: #FFA500;");
-                        return;
-                    }
-                    
-                    if (puzzle.checkAnswer(userAnswer)) {
-                        feedbackLabel.setText("Correct! The door is now unlocked.");
-                        feedbackLabel.setStyle("-fx-text-fill: #4CAF50;");
-                        submitButton.setDisable(true);
-                        answerField.setDisable(true);
-                        
-                        // Mark puzzle as solved
-                        puzzle.setSolved(true);
-                        puzzleSolved = true;
-                        
-                        // Call onPuzzleSolved to handle rewards and door unlocking
-                        onPuzzleSolved(currentRoom);
-                        
-                        // Play success sound
-                        soundManager.playSound("puzzle_solved");
-                        
-                        // Close the window after a delay
-                        new Thread(() -> {
-                            try {
-                                Thread.sleep(2000);
-                                Platform.runLater(() -> puzzleStage.close());
-                            } catch (InterruptedException ex) {
-                                ex.printStackTrace();
-                            }
-                        }).start();
-                    } else {
-                        feedbackLabel.setText("Incorrect. Try again!");
-                        feedbackLabel.setStyle("-fx-text-fill: #FF4444;");
-                        answerField.clear();
-                        answerField.requestFocus();
-                    }
-                });
-                
-                // Add keyboard shortcuts
-                scene.setOnKeyPressed(e -> {
-                    if (e.getCode() == KeyCode.ENTER) {
-                        submitButton.fire();
-                    } else if (e.getCode() == KeyCode.ESCAPE) {
-                        puzzleStage.close();
-                    }
-                });
-                
-                // Show the stage
-                puzzleStage.show();
-                
-            } catch (Exception e) {
-                System.err.println("Error creating puzzle window: " + e.getMessage());
-                e.printStackTrace();
-            }
+public void interactWithPuzzle() {
+        // Only interact if we're in a puzzle room
+        if (currentRoom == null || currentRoom.getType() != DungeonRoom.RoomType.PUZZLE) {
+            System.out.println("Not in a puzzle room");
+            return;
         }
+        
+        // Get the puzzle for this room
+        Puzzle puzzle = puzzles.get(currentRoom);
+        if (puzzle == null) {
+            System.out.println("No puzzle found for this room");
+            return;
+        }
+        
+        if (puzzle.isSolved()) {
+            System.out.println("Puzzle already solved");
+            return;
+        }
+        
+        // Create puzzle window programmatically
+        try {
+            System.out.println("Creating puzzle window...");
+            
+            // Create root container
+            VBox rootContainer = new VBox(20);
+            rootContainer.setAlignment(Pos.CENTER);
+            rootContainer.setStyle("-fx-background-color: rgba(0, 0, 0, 0.9); -fx-padding: 20; -fx-background-radius: 10;");
+            
+            // Create title
+            Label titleLabel = new Label("Puzzle Room");
+            titleLabel.setStyle("-fx-font-size: 24px; -fx-text-fill: white; -fx-font-weight: bold;");
+            
+            // Create description
+            Label descriptionLabel = new Label(puzzle.getDescription());
+            descriptionLabel.setStyle("-fx-font-size: 16px; -fx-text-fill: #CCCCCC;");
+            descriptionLabel.setWrapText(true);
+            descriptionLabel.setMaxWidth(400);
+            
+            // Create question label
+            Label questionLabel = new Label(puzzle.getQuestion());
+            questionLabel.setStyle("-fx-font-size: 18px; -fx-text-fill: #FFD700; -fx-font-weight: bold;");
+            questionLabel.setWrapText(true);
+            questionLabel.setMaxWidth(400);
+            
+            // Create answer field
+            TextField answerField = new TextField();
+            answerField.setPromptText("Enter your answer");
+            answerField.setMaxWidth(300);
+            answerField.setStyle("-fx-background-color: rgba(255, 255, 255, 0.9); -fx-font-size: 16px; -fx-padding: 8;");
+            
+            // Create feedback label
+            Label feedbackLabel = new Label("");
+            feedbackLabel.setStyle("-fx-font-size: 16px; -fx-text-fill: white;");
+            feedbackLabel.setWrapText(true);
+            feedbackLabel.setMaxWidth(400);
+            
+            // Create submit button
+            Button submitButton = new Button("Submit");
+            submitButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 16px; -fx-padding: 10 20; -fx-background-radius: 5;");
+            submitButton.setOnMouseEntered(e -> submitButton.setStyle("-fx-background-color: #45a049; -fx-text-fill: white; -fx-font-size: 16px; -fx-padding: 10 20; -fx-background-radius: 5;"));
+            submitButton.setOnMouseExited(e -> submitButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 16px; -fx-padding: 10 20; -fx-background-radius: 5;"));
+            
+            // Add components to container
+            rootContainer.getChildren().addAll(titleLabel, descriptionLabel, questionLabel, answerField, feedbackLabel, submitButton);
+            
+            // Create the scene
+            Scene scene = new Scene(rootContainer);
+            
+            // Create the stage
+            Stage puzzleStage = new Stage();
+            puzzleStage.initModality(Modality.APPLICATION_MODAL);
+            puzzleStage.initStyle(StageStyle.UNDECORATED);
+            puzzleStage.setScene(scene);
+            
+            // Center the stage
+            puzzleStage.centerOnScreen();
+            
+            // Handle answer submission
+            submitButton.setOnAction(e -> {
+                String userAnswer = answerField.getText().trim();
+                if (userAnswer.isEmpty()) {
+                    feedbackLabel.setText("Please enter an answer");
+                    feedbackLabel.setStyle("-fx-text-fill: #FFA500;");
+                    return;
+                }
+                
+                if (puzzle.checkAnswer(userAnswer)) {
+                    feedbackLabel.setText("Correct! The door is now unlocked.");
+                    feedbackLabel.setStyle("-fx-text-fill: #4CAF50;");
+                    submitButton.setDisable(true);
+                    answerField.setDisable(true);
+                    
+                    // Mark puzzle as solved
+                    puzzle.setSolved(true);
+                    puzzleSolved = true;
+                    
+                    // Call onPuzzleSolved to handle rewards and door unlocking
+                    onPuzzleSolved(currentRoom);
+                    
+                    // Play success sound
+                    soundManager.playSound("puzzle_solved");
+                    
+                    // Close the window after a delay
+                    new Thread(() -> {
+                        try {
+                            Thread.sleep(2000);
+                            Platform.runLater(() -> puzzleStage.close());
+                        } catch (InterruptedException ex) {
+                            ex.printStackTrace();
+                        }
+                    }).start();
+                } else {
+                    feedbackLabel.setText("Incorrect. Try again!");
+                    feedbackLabel.setStyle("-fx-text-fill: #FF4444;");
+                    answerField.clear();
+                    answerField.requestFocus();
+                }
+            });
+            
+            // Add keyboard shortcuts
+            scene.setOnKeyPressed(e -> {
+                if (e.getCode() == KeyCode.ENTER) {
+                    submitButton.fire();
+                } else if (e.getCode() == KeyCode.ESCAPE) {
+                    puzzleStage.close();
+                }
+            });
+            
+            // Show the stage
+            puzzleStage.show();
+            
+        } catch (Exception e) {
+            System.err.println("Error creating puzzle window: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
 
     private void spawnRandomItem(Point2D position) {
         Random random = new Random();
@@ -3028,9 +3082,9 @@ public class GameController {
                 }
             }
         }
-    }
+}
 
-    public void onPuzzleSolved(DungeonRoom room) {
+public void onPuzzleSolved(DungeonRoom room) {
         // Mark puzzle as solved
         puzzleCompleted = true;
         
@@ -3182,7 +3236,7 @@ public class GameController {
         item.setY(position.getY());
         item.setSize(20);
         roomItems.add(item);
-    }
+}
 
     // Handle weapon selection
     private void selectWeapon(int weaponIndex) {
@@ -3460,9 +3514,10 @@ public class GameController {
             String roomTypeText = door.getConnectedRoom().getType().toString();
             gc.setFill(Color.WHITE);
             gc.setFont(Font.font("Verdana", FontWeight.NORMAL, 10));
+            gc.setTextAlign(TextAlignment.CENTER); // Center align text
             gc.fillText(roomTypeText, 
-                door.getX() + door.getWidth() / 2 - 20,
-                door.getY() + door.getHeight() + 15);
+                door.getX() + door.getWidth() / 2, // Center X position
+                door.getY() - 5); // Position above door
         }
     }
 
@@ -3488,4 +3543,73 @@ public class GameController {
     private static final double BOUNCE_DISTANCE = 100.0; // Distance to bounce back
     // Add these fields at the top of the class with other fields
     private Map<Enemy.EnemyType, javafx.scene.image.Image> enemyImages = new HashMap<>();
+    private Map<Weapon.WeaponType, javafx.scene.image.Image> weaponImages = new HashMap<>();
+    private GraphicsContext gc;
+
+    private void loadWeaponImages() {
+        try {
+            for (Weapon.WeaponType type : Weapon.WeaponType.values()) {
+                weaponImages.put(type, new javafx.scene.image.Image(getClass().getResourceAsStream(type.getImagePath())));
+            }
+        } catch (Exception e) {
+            System.err.println("Error loading weapon images: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private void handleInventoryItemUse(Item item) {
+        if (item instanceof Weapon) {
+            Weapon weapon = (Weapon) item;
+            player.setEquippedWeapon(weapon);  // Use setEquippedWeapon instead of setWeapon
+            System.out.println("Equipped weapon: " + weapon.getName());
+            
+            // Update player's current weapon
+            player.setWeapon(weapon);
+            
+            // Update player's weapons list if needed
+            List<Weapon> weapons = player.getWeapons();
+            if (!weapons.contains(weapon)) {
+                weapons.add(weapon);
+            }
+            
+            // Update current weapon index
+            player.selectWeapon(weapons.indexOf(weapon));
+        }
+    }
+
+    private void renderPlayer() {
+        // Draw player
+        gc.setFill(Color.BLUE);
+        gc.fillRect(player.getX(), player.getY(), player.getSize(), player.getSize());
+        
+        // Draw player's weapon
+        Weapon currentWeapon = player.getWeapon();
+        if (currentWeapon != null) {
+            javafx.scene.image.Image weaponImage = weaponImages.get(currentWeapon.getWeaponType());
+            if (weaponImage != null) {
+                // Calculate weapon position based on player's position and direction
+                double weaponSize = player.getSize() * 0.8;
+                double weaponX = player.getX() + (player.getSize() - weaponSize) / 2;
+                double weaponY = player.getY() + (player.getSize() - weaponSize) / 2;
+                
+                // Draw weapon image
+                gc.drawImage(weaponImage, weaponX, weaponY, weaponSize, weaponSize);
+            }
+        }
+        
+        // Draw player's health bar
+        double healthBarWidth = player.getSize() * 0.8;
+        double healthBarHeight = 5;
+        double healthBarY = player.getY() - 10;
+        double healthBarX = player.getX() + (player.getSize() - healthBarWidth) / 2;
+        
+        // Health bar background
+        gc.setFill(Color.BLACK);
+        gc.fillRect(healthBarX, healthBarY, healthBarWidth, healthBarHeight);
+        
+        // Health bar foreground
+        double healthPercentage = (double) player.getHealth() / player.getMaxHealth();
+        gc.setFill(Color.GREEN);
+        gc.fillRect(healthBarX, healthBarY, healthBarWidth * healthPercentage, healthBarHeight);
+    }
 }
