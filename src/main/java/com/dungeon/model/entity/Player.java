@@ -54,6 +54,7 @@ public class Player extends Entity {
     private Armor equippedArmor;
     private final Inventory inventory;
     private final int maxInventorySize = 20;
+    private Weapon currentWeapon;
 
     public Player(double x, double y) {
         super(x, y, DEFAULT_HEALTH, DEFAULT_SPEED, DEFAULT_SIZE);
@@ -99,6 +100,7 @@ this.size = 64;
         
         // Initialize inventory
         this.inventory = new Inventory(maxInventorySize);
+        this.currentWeapon = Weapon.createBasicWeapon();
     }
 
     public void handleInput(Set<KeyCode> activeKeys, double deltaTime) {
@@ -528,5 +530,21 @@ this.size = 64;
         
         // Set new position (boundary checking would be done in GameController)
         position = new Point2D(newX, newY);
+    }
+
+    public Weapon getWeapon() {
+        return currentWeapon;
+    }
+    
+    public void setWeapon(Weapon weapon) {
+        this.currentWeapon = weapon;
+    }
+
+    public List<Weapon> getWeapons() {
+        return weapons;
+    }
+    
+    public void setWeapons(List<Weapon> weapons) {
+        this.weapons = weapons;
     }
 }
