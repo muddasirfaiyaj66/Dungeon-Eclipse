@@ -7,6 +7,7 @@ import java.util.Set;
 import com.dungeon.model.Armor;
 import com.dungeon.model.Inventory;
 import com.dungeon.model.Item;
+import com.dungeon.model.Weapon;
 
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
@@ -29,6 +30,7 @@ public class Player extends Entity {
     private final Set<ProjectileAttack> projectiles;
     private double attackCooldown;
     private Point2D aimDirection;
+    private Point2D facingDirection;
     private boolean isMeleeAttacking;
     private double meleeAttackTimer;
     private List<Weapon> weapons;
@@ -53,61 +55,6 @@ public class Player extends Entity {
     private final Inventory inventory;
     private final int maxInventorySize = 20;
 
-    public enum WeaponType {
-        SWORD(MELEE_DAMAGE, 0.4, "Sword", true),
-        BOW(RANGED_DAMAGE, 0.6, "Bow", false),
-        STAFF(RANGED_DAMAGE * 1.2, 0.8, "Staff", false),
-        AXE(MELEE_DAMAGE * 1.3, 0.7, "Axe", true),
-        DAGGER(MELEE_DAMAGE * 1.3, 0.7, "Dagger", true);
-        
-        private final double damage;
-        private final double cooldown;
-        private final String name;
-        private final boolean isMelee;
-        
-        WeaponType(double damage, double cooldown, String name, boolean isMelee) {
-            this.damage = damage;
-            this.cooldown = cooldown;
-            this.name = name;
-            this.isMelee = isMelee;
-        }
-        
-        public double getDamage() { return damage; }
-        public double getCooldown() { return cooldown; }
-        public String getName() { return name; }
-        public boolean isMelee() { return isMelee; }
-    }
-    
-    public static class Weapon {
-        private final WeaponType type;
-        private final Color color;
-        
-        public Weapon(WeaponType type) {
-            this.type = type;
-            
-            // Assign color based on weapon type
-            switch (type) {
-                case SWORD:
-                    this.color = Color.SILVER;
-                    break;
-                case BOW:
-                    this.color = Color.BROWN;
-                    break;
-                case STAFF:
-                    this.color = Color.PURPLE;
-                    break;
-                case AXE:
-                    this.color = Color.DARKGRAY;
-                    break;
-                default:
-                    this.color = Color.WHITE;
-            }
-        }
-        
-        public WeaponType getType() { return type; }
-        public Color getColor() { return color; }
-    }
-
     public Player(double x, double y) {
         super(x, y, DEFAULT_HEALTH, DEFAULT_SPEED, DEFAULT_SIZE);
          try {
@@ -131,15 +78,16 @@ this.size = 64;
         this.projectiles = new HashSet<>();
         this.attackCooldown = 0;
         this.aimDirection = new Point2D(1, 0);
+        this.facingDirection = new Point2D(1, 0);
         this.isMeleeAttacking = false;
         this.meleeAttackTimer = 0;
         
-        // Initialize weapons
+        // Initialize weapons with basic weapons
         this.weapons = new ArrayList<>();
-        this.weapons.add(new Weapon(WeaponType.SWORD));
-        this.weapons.add(new Weapon(WeaponType.BOW));
-        this.weapons.add(new Weapon(WeaponType.STAFF));
-        this.weapons.add(new Weapon(WeaponType.AXE));
+        this.weapons.add(Weapon.createBasicWeapon());
+        this.weapons.add(new Weapon("Basic Bow", "A simple bow for ranged attacks", 15, Weapon.WeaponType.BOW));
+        this.weapons.add(new Weapon("Basic Staff", "A magical staff for spellcasting", 20, Weapon.WeaponType.SPEAR));
+        this.weapons.add(new Weapon("Basic Axe", "A heavy axe for powerful strikes", 25, Weapon.WeaponType.AXE));
         this.currentWeaponIndex = 0;
         
         // Initialize stats
@@ -168,6 +116,15 @@ this.size = 64;
         }
         if (activeKeys.contains(KeyCode.D)) {
             dx += 1;
+        }
+        
+        // Update facing direction based on movement
+        if (dx != 0 || dy != 0) {
+            // Normalize the direction vector
+            double length = Math.sqrt(dx * dx + dy * dy);
+            dx /= length;
+            dy /= length;
+            facingDirection = new Point2D(dx, dy);
         }
         
         // Normalize diagonal movement
@@ -252,53 +209,56 @@ this.size = 64;
 
     @Override
     public void render(GraphicsContext gc) {
-        
         if (playerImage != null) {
-        // Draw the player image
-        double rotation = Math.toDegrees(Math.atan2(aimDirection.getY(), aimDirection.getX()));
-        
         // Save the current graphics context state
         gc.save();
         
-        // Translate to player center, rotate, then draw centered
+            // Calculate the center point of the player
         double centerX = position.getX() + size / 2;
         double centerY = position.getY() + size / 2;
         
+            // Calculate rotation angle based on facing direction
+            double angle;
+            if (facingDirection.getY() < 0) {
+                // When facing up
+                angle = -90;
+            } else if (facingDirection.getY() > 0) {
+                // When facing down
+                angle = 90;
+            } else {
+                // When facing right or left
+                angle = 0;
+            }
+            
+            // Translate to the center of the player
         gc.translate(centerX, centerY);
-        gc.rotate(rotation);
+            
+            // Rotate around the center
+            gc.rotate(angle);
+            
+            // Draw the image centered, flip horizontally if facing left
+            if (facingDirection.getX() < 0) {
+                gc.scale(-1, 1); // Flip horizontally
+                gc.drawImage(playerImage, -size/2, -size/2, size, size);
+            } else {
         gc.drawImage(playerImage, -size/2, -size/2, size, size);
+            }
         
         // Restore the graphics context state
         gc.restore();
-        
-        // If melee attacking, you might still want to show some effect
-        if (isMeleeAttacking) {
-            Weapon currentWeapon = weapons.get(currentWeaponIndex);
-            gc.setStroke(currentWeapon.getColor());
-            gc.setLineWidth(3);
-            gc.strokeLine(
-                centerX,
-                centerY,
-                centerX + aimDirection.getX() * size * 1.5,
-                centerY + aimDirection.getY() * size * 1.5
-            );
-        }
     } else {
-        // Get current weapon for coloring
-        Weapon currentWeapon = weapons.get(currentWeaponIndex);
-        
-        // Draw player body
+            // Fallback to basic shape if image fails to load
         gc.setFill(Color.DARKBLUE);
         gc.fillOval(position.getX(), position.getY(), size, size);
         
-        // Draw player face (eyes and mouth) looking in aim direction
+            // Draw player face (eyes and mouth) looking in facing direction
         double centerX = position.getX() + size / 2;
         double centerY = position.getY() + size / 2;
         
         // Draw eyes
         double eyeSize = size / 8;
-        double eyeOffsetX = aimDirection.getX() * size / 6;
-        double eyeOffsetY = aimDirection.getY() * size / 6;
+            double eyeOffsetX = facingDirection.getX() * size / 6;
+            double eyeOffsetY = facingDirection.getY() * size / 6;
         
         // Left eye
         gc.setFill(Color.WHITE);
@@ -316,11 +276,14 @@ this.size = 64;
             eyeSize, 
             eyeSize
         );
+        }
         
         // Draw weapon if melee attacking
         if (isMeleeAttacking) {
-            gc.setStroke(currentWeapon.getColor());
+            gc.setStroke(Color.SILVER); // Default weapon color
             gc.setLineWidth(3);
+            double centerX = position.getX() + size / 2;
+            double centerY = position.getY() + size / 2;
             gc.strokeLine(
                 centerX,
                 centerY,
@@ -328,17 +291,12 @@ this.size = 64;
                 centerY + aimDirection.getY() * size * 1.5
             );
         }
-    }
-        
         
         // Draw projectiles
         for (ProjectileAttack projectile : projectiles) {
             projectile.render(gc);
         }
     }
-
-
-
 
     // Inventory methods
     public boolean addItem(Item item) {
@@ -363,30 +321,45 @@ this.size = 64;
                 break;
                 
             case WEAPON:
-                // We can't directly cast Item to Weapon since they're different types
-                // Instead, we'll create a corresponding weapon in our system
-                // In a full game, you would want to match attributes between Item and Weapon
-                WeaponType weaponType = WeaponType.SWORD; // Default
-                String weaponName = item.getName().toUpperCase();
-                if (weaponName.contains("BOW") || weaponName.contains("ARROW")) {
-                    weaponType = WeaponType.BOW;
-                } else if (weaponName.contains("STAFF") || weaponName.contains("MAGIC")) {
-                    weaponType = WeaponType.STAFF;
-                } else if (weaponName.contains("AXE")) {
-                    weaponType = WeaponType.AXE;
-                } else if (weaponName.contains("DAGGER") || weaponName.contains("KNIFE")) {
-                    weaponType = WeaponType.DAGGER;
+                // Convert Item to Weapon
+                try {
+                    Weapon.WeaponType weaponType = Weapon.WeaponType.valueOf(item.getName().toUpperCase());
+                    Weapon weapon = new Weapon(
+                        item.getName(),
+                        item.getDescription(),
+                        item.getValue(),
+                        weaponType
+                    );
+                    this.equippedWeapon = weapon;
+                    used = true;
+                } catch (IllegalArgumentException e) {
+                    System.out.println("Invalid weapon type: " + item.getName());
                 }
-                
-                this.equippedWeapon = new Weapon(weaponType);
-                used = true;
                 break;
                 
             case ARMOR:
-                // Same issue as with weapon - would need a more robust system
-                // Here we'll just note that armor was equipped
-                this.equippedArmor = null; // Would need a proper conversion
+                // Convert Item to Armor
+                try {
+                    Armor.ArmorType armorType = Armor.ArmorType.valueOf(item.getName().toUpperCase());
+                    Armor armor = new Armor(
+                        item.getName(),
+                        item.getDescription(),
+                        item.getValue(),
+                        armorType
+                    );
+                    this.equippedArmor = armor;
+                    used = true;
+                } catch (IllegalArgumentException e) {
+                    // If name doesn't match armor type, use default
+                    Armor armor = new Armor(
+                        item.getName(),
+                        item.getDescription(),
+                        item.getValue(),
+                        Armor.ArmorType.LIGHT
+                    );
+                    this.equippedArmor = armor;
                 used = true;
+                }
                 break;
                 
             default:
@@ -454,8 +427,7 @@ this.size = 64;
     }
 
     public double getMeleeDamage() {
-        Weapon currentWeapon = weapons.get(currentWeaponIndex);
-        return currentWeapon.getType().getDamage();
+        return equippedWeapon != null ? equippedWeapon.getDamage() : MELEE_DAMAGE;
     }
 
     public Set<ProjectileAttack> getProjectiles() {
