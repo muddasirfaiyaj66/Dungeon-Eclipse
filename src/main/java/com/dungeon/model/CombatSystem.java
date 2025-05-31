@@ -18,9 +18,10 @@ public class CombatSystem {
     
     // Attack types with different damage multipliers
     public enum AttackType {
-        MELEE(1.0),
-        RANGED(0.8),
-        SPECIAL(1.5);
+        NORMAL(1.0),
+        HEAVY(1.5),
+        QUICK(0.7),
+        SPECIAL(2.0);
         
         private final double damageMultiplier;
         
@@ -45,7 +46,8 @@ public class CombatSystem {
         if (player == null || enemy == null) return 0;
         
         // Calculate base damage using player's weapon
-        double baseDamage = player.getEquippedWeapon() != null ? player.getEquippedWeapon().getType().getDamage() : 1;
+        double baseDamage = player.getEquippedWeapon() != null ? 
+            player.getEquippedWeapon().getDamage() : 10; // Default damage if no weapon
         
         // Apply attack type multiplier
         double multiplier = attackType.getDamageMultiplier();
@@ -113,7 +115,8 @@ public class CombatSystem {
         int[] damageDealt = new int[enemies.size()];
         
         // Calculate base damage
-        double baseDamage = player.getEquippedWeapon() != null ? player.getEquippedWeapon().getType().getDamage() : 1;
+        double baseDamage = player.getEquippedWeapon() != null ? 
+            player.getEquippedWeapon().getDamage() : 10; // Default damage if no weapon
         
         // Apply attack type multiplier
         double multiplier = attackType.getDamageMultiplier();
@@ -207,8 +210,8 @@ public class CombatSystem {
         double baseDamage = 10; // Default damage if no weapon
         
         if (player.getEquippedWeapon() != null) {
-            // Use the weapon's damage value, affected by weapon type
-            baseDamage = player.getEquippedWeapon().getType().getDamage();
+            // Use the weapon's damage value
+            baseDamage = player.getEquippedWeapon().getDamage();
             
             // Apply strength bonus (5% damage per strength point)
             double strengthBonus = player.getStrength() * 0.05;
@@ -240,7 +243,7 @@ public class CombatSystem {
         
         if (player.getEquippedWeapon() != null) {
             // Increase crit chance based on weapon type
-            if (player.getEquippedWeapon().getType() == Player.WeaponType.DAGGER) {
+            if (player.getEquippedWeapon().getWeaponType() == Weapon.WeaponType.DAGGER) {
                 critChance += 0.1; // Daggers have higher crit chance
             }
         }

@@ -13,20 +13,22 @@ public class Weapon extends Item {
      * Types of weapons with different attributes
      */
     public enum WeaponType {
-        SWORD(1.0, 50, 1.5),    // Balanced
-        DAGGER(0.7, 40, 2.0),   // Fast but short range
-        AXE(1.3, 45, 1.0),      // High damage but slow
-        SPEAR(0.9, 70, 1.2),    // Long range
-        BOW(0.8, 200, 0.8);     // Ranged weapon
+        SWORD(1.0, 50, 1.5, "/com/dungeon/assets/images/sword.png"),    // Balanced
+        DAGGER(0.7, 40, 2.0, "/com/dungeon/assets/images/dagger.png"),   // Fast but short range
+        AXE(1.3, 45, 1.0, "/com/dungeon/assets/images/axe.png"),      // High damage but slow
+        SPEAR(0.9, 70, 1.2, "/com/dungeon/assets/images/spear.png"),    // Long range
+        BOW(0.8, 200, 0.8, "/com/dungeon/assets/images/bow.png");     // Ranged weapon
         
         private final double damageMultiplier;
         private final double range;
         private final double speedMultiplier;
+        private final String imagePath;
         
-        WeaponType(double damageMultiplier, double range, double speedMultiplier) {
+        WeaponType(double damageMultiplier, double range, double speedMultiplier, String imagePath) {
             this.damageMultiplier = damageMultiplier;
             this.range = range;
             this.speedMultiplier = speedMultiplier;
+            this.imagePath = imagePath;
         }
         
         public double getDamageMultiplier() {
@@ -40,6 +42,10 @@ public class Weapon extends Item {
         public double getSpeedMultiplier() {
             return speedMultiplier;
         }
+        
+        public String getImagePath() {
+            return imagePath;
+        }
     }
     
     /**
@@ -48,26 +54,14 @@ public class Weapon extends Item {
      * @param description Weapon description
      * @param baseDamage Base damage value
      * @param weaponType Type of weapon
-     * @param iconPath Path to weapon icon (optional)
      */
-    public Weapon(String name, String description, int baseDamage, WeaponType weaponType, String iconPath) {
-        super(name, description, ItemType.WEAPON, baseDamage, false, iconPath);
+    public Weapon(String name, String description, int baseDamage, WeaponType weaponType) {
+        super(name, description, ItemType.WEAPON, baseDamage, false, weaponType.getImagePath());
         
         this.weaponType = weaponType;
         this.damage = (int)(baseDamage * weaponType.getDamageMultiplier());
         this.attackRange = weaponType.getRange();
         this.attackSpeed = 1.0 * weaponType.getSpeedMultiplier();
-    }
-    
-    /**
-     * Creates a new weapon with default icon
-     * @param name Weapon name
-     * @param description Weapon description
-     * @param baseDamage Base damage value
-     * @param weaponType Type of weapon
-     */
-    public Weapon(String name, String description, int baseDamage, WeaponType weaponType) {
-        this(name, description, baseDamage, weaponType, null);
     }
     
     /**

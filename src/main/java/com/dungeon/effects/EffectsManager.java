@@ -2,6 +2,7 @@ package com.dungeon.effects;
 
 import com.dungeon.model.DungeonRoom;
 import com.dungeon.model.Door;
+import com.dungeon.audio.SoundManager;
 import javafx.animation.FadeTransition;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -12,6 +13,7 @@ import javafx.animation.ScaleTransition;
 import javafx.animation.SequentialTransition;
 import javafx.animation.Timeline;
 import javafx.animation.TranslateTransition;
+import javafx.animation.PauseTransition;
 import javafx.geometry.Point2D;
 import javafx.scene.transform.Rotate;
 import javafx.scene.Node;
@@ -45,6 +47,7 @@ public class EffectsManager {
     private final GraphicsContext gc;
     private final List<VisualEffect> effects;
     private final Random random;
+    private final SoundManager soundManager;
     
     // Transition overlay
     private Rectangle transitionOverlay;
@@ -55,6 +58,7 @@ public class EffectsManager {
     private static final double EXPLOSION_DURATION = 1.0; // seconds
 
     public void showFloatingText(String s, Point2D position, Color green) {
+        showFloatingText(s, position, green, 20);
     }
 
     public void render(GraphicsContext gc) {
@@ -74,6 +78,7 @@ public class EffectsManager {
         this.gc = effectsCanvas.getGraphicsContext2D();
         this.effects = new ArrayList<>();
         this.random = new Random();
+        this.soundManager = SoundManager.getInstance();
         
         // Initialize transition overlay
         this.transitionOverlay = new Rectangle(0, 0, 
@@ -113,124 +118,159 @@ public class EffectsManager {
     
     // Room transition effects
     public void startRoomTransition(DungeonRoom.RoomType roomType, Runnable onTransitionComplete) {
-        // Create black overlay for fade effect
-        transitionOverlay.setOpacity(0);
+        // Play transition sound
+        soundManager.playSound("teleport");
         
-        // Simplified fade animations with shorter duration
-        FadeTransition fadeIn = new FadeTransition(Duration.seconds(0.3), transitionOverlay);
-        fadeIn.setFromValue(0);
-        fadeIn.setToValue(1);
+        // Create a stylish background panel
+        Rectangle bgPanel = new Rectangle(0, 0, effectsCanvas.getWidth(), effectsCanvas.getHeight());
+        bgPanel.setFill(Color.BLACK);
+        bgPanel.setOpacity(0);
+        effectsPane.getChildren().add(bgPanel);
         
-        FadeTransition fadeOut = new FadeTransition(Duration.seconds(0.3), transitionOverlay);
-        fadeOut.setFromValue(1);
-        fadeOut.setToValue(0);
+        // Create decorative elements
+        List<Rectangle> decorativeLines = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            Rectangle line = new Rectangle(0, 0, 0, 4);
+            line.setFill(getRoomTypeColor(roomType));
+            line.setOpacity(0);
+            line.setLayoutX(effectsCanvas.getWidth() / 2);
+            line.setLayoutY(effectsCanvas.getHeight() / 2);
+            effectsPane.getChildren().add(line);
+            decorativeLines.add(line);
+        }
         
-        // Create room type text with simpler effects
+        // Create room type text with enhanced styling
         Text roomTypeText = createRoomTypeText(roomType);
         roomTypeText.setOpacity(0);
         effectsPane.getChildren().add(roomTypeText);
         
-        // Simplified text animations
+        // Create a sequence of animations
+        SequentialTransition sequence = new SequentialTransition();
+        
+        // Fade in background
+        FadeTransition bgFadeIn = new FadeTransition(Duration.seconds(0.2), bgPanel);
+        bgFadeIn.setFromValue(0);
+        bgFadeIn.setToValue(0.9);
+        
+        // Animate decorative lines
+        ParallelTransition linesAnimation = new ParallelTransition();
+        for (int i = 0; i < decorativeLines.size(); i++) {
+            Rectangle line = decorativeLines.get(i);
+            double angle = (i * 72) * Math.PI / 180; // 72 degrees between each line
+            
+            ScaleTransition lineScale = new ScaleTransition(Duration.seconds(0.2), line);
+            lineScale.setFromX(0);
+            lineScale.setToX(1);
+            lineScale.setToY(1);
+            
+            RotateTransition lineRotate = new RotateTransition(Duration.seconds(0.2), line);
+            lineRotate.setFromAngle(0);
+            lineRotate.setToAngle(angle * 180 / Math.PI);
+            
+            FadeTransition lineFade = new FadeTransition(Duration.seconds(0.2), line);
+            lineFade.setFromValue(0);
+            lineFade.setToValue(0.7);
+            
+            ParallelTransition lineAnimation = new ParallelTransition(lineScale, lineRotate, lineFade);
+            linesAnimation.getChildren().add(lineAnimation);
+        }
+        
+        // Text animation with enhanced effects
         FadeTransition textFadeIn = new FadeTransition(Duration.seconds(0.2), roomTypeText);
         textFadeIn.setFromValue(0);
         textFadeIn.setToValue(1);
         
+        ScaleTransition textScale = new ScaleTransition(Duration.seconds(0.2), roomTypeText);
+        textScale.setFromX(0.8);
+        textScale.setFromY(0.8);
+        textScale.setToX(1.0);
+        textScale.setToY(1.0);
+        
+        // Combine text animations
+        ParallelTransition textAnimation = new ParallelTransition(textFadeIn, textScale);
+        
+        // Hold the text visible briefly
+        PauseTransition textHold = new PauseTransition(Duration.seconds(0.2));
+        
+        // Fade out animations
         FadeTransition textFadeOut = new FadeTransition(Duration.seconds(0.2), roomTypeText);
         textFadeOut.setFromValue(1);
         textFadeOut.setToValue(0);
-        textFadeOut.setDelay(Duration.seconds(0.5));
         
-        // Execute transition with fewer parallel animations
-        SequentialTransition sequentialTransition = new SequentialTransition(
-            fadeIn,
-            textFadeIn,
+        FadeTransition bgFadeOut = new FadeTransition(Duration.seconds(0.2), bgPanel);
+        bgFadeOut.setFromValue(0.9);
+        bgFadeOut.setToValue(0);
+        
+        // Add all animations to the sequence
+        sequence.getChildren().addAll(
+            bgFadeIn,
+            linesAnimation,
+            textAnimation,
+            textHold,
             textFadeOut,
-            fadeOut
+            bgFadeOut
         );
         
-        // Add room-specific effects after transition
-        sequentialTransition.setOnFinished(e -> {
-            effectsPane.getChildren().remove(roomTypeText);
-            // Simplified room enter effect
-            addSimpleRoomEnterEffect(roomType);
+        // Clean up and run completion callback
+        sequence.setOnFinished(e -> {
+            effectsPane.getChildren().removeAll(bgPanel, roomTypeText);
+            effectsPane.getChildren().removeAll(decorativeLines);
             if (onTransitionComplete != null) {
                 onTransitionComplete.run();
             }
         });
         
-        sequentialTransition.play();
+        // Start the animation sequence
+        sequence.play();
     }
     
-    private void addSimpleRoomEnterEffect(DungeonRoom.RoomType roomType) {
-        // Simplified room enter effects
-        Rectangle flash = new Rectangle(0, 0, effectsCanvas.getWidth(), effectsCanvas.getHeight());
-        Color flashColor;
-        
+    private Color getRoomTypeColor(DungeonRoom.RoomType roomType) {
         switch (roomType) {
             case COMBAT:
-                flashColor = Color.RED;
-                break;
+                return Color.RED;
             case PUZZLE:
-                flashColor = Color.BLUE;
-                break;
+                return Color.BLUE;
             case TREASURE:
-                flashColor = Color.GOLD;
-                break;
+                return Color.GOLD;
             case BOSS:
-                flashColor = Color.DARKRED;
-                break;
+                return Color.DARKRED;
+            case SPAWN:
+                return Color.GREEN;
             default:
-                flashColor = Color.WHITE;
+                return Color.WHITE;
         }
-        
-        flash.setFill(flashColor);
-        flash.setOpacity(0.2);
-        effectsPane.getChildren().add(flash);
-        
-        // Simple fade out animation
-        FadeTransition flashFade = new FadeTransition(Duration.seconds(0.3), flash);
-        flashFade.setFromValue(0.2);
-        flashFade.setToValue(0);
-        flashFade.setOnFinished(e -> effectsPane.getChildren().remove(flash));
-        flashFade.play();
     }
     
     private Text createRoomTypeText(DungeonRoom.RoomType roomType) {
         String message;
-        Color color;
+        Color color = getRoomTypeColor(roomType);
         
         switch (roomType) {
             case COMBAT:
                 message = "COMBAT ROOM";
-                color = Color.RED;
                 break;
             case PUZZLE:
                 message = "PUZZLE ROOM";
-                color = Color.BLUE;
                 break;
             case TREASURE:
                 message = "TREASURE ROOM";
-                color = Color.GOLD;
                 break;
             case BOSS:
                 message = "BOSS ROOM";
-                color = Color.DARKRED;
                 break;
             case SPAWN:
                 message = "SPAWN ROOM";
-                color = Color.GREEN;
                 break;
             default:
                 message = "NEW ROOM";
-                color = Color.WHITE;
         }
         
         Text text = new Text(message);
-        text.setFont(Font.font("Arial", FontWeight.BOLD, 36));
+        text.setFont(Font.font("Arial", FontWeight.BOLD, 48));
         text.setFill(color);
         
-        // Simplified glow effect
-        DropShadow shadow = new DropShadow(BlurType.GAUSSIAN, color, 5, 0.5, 0, 0);
+        // Enhanced glow effect
+        DropShadow shadow = new DropShadow(BlurType.GAUSSIAN, color, 10, 0.8, 0, 0);
         text.setEffect(shadow);
         
         // Center the text
