@@ -1,11 +1,1 @@
-{
-    "java.configuration.updateBuildConfiguration": "automatic",
-    "java.compile.nullAnalysis.mode": "automatic",
-    "java.project.sourcePaths": ["src/main/java"],
-    "java.project.outputPath": "target/classes",
-    "java.project.referencedLibraries": [
-        "lib/**/*.jar"
-    ],
-    "java.debug.settings.vmArgs": "--enable-preview --add-opens javafx.graphics/javafx.scene=ALL-UNNAMED",
-    "java.debug.settings.onBuildFailureProceed": true
-} 
+
