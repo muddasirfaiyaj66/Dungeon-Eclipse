@@ -84,14 +84,15 @@ public class InventoryController {
         switch (item.getType()) {
             case POTION:
                 player.heal(item.getValue());
-                player.removeItem(item);
+                if (player.getInventory().hasItem(item.getType())) {
+                    player.removeItem(item);
+                }
                 break;
                 
             case WEAPON:
                 if (item instanceof Weapon) {
                     Weapon weapon = (Weapon) item;
                     player.setEquippedWeapon(weapon);
-                    player.removeItem(item);
                 }
                 break;
                 
@@ -99,12 +100,14 @@ public class InventoryController {
                 if (item instanceof Armor) {
                     Armor armor = (Armor) item;
                     player.setEquippedArmor(armor);
-                    player.removeItem(item);
                 }
                 break;
                 
             case KEY:
-                // Keys are used automatically when interacting with doors
+                break;
+                
+            default:
+                System.out.println("Unhandled item type in InventoryController.useItem: " + item.getType());
                 break;
         }
     }
