@@ -629,11 +629,11 @@ public class GameController {
 
     private void attackEnemiesInRange() {
         // Find enemies in melee range and damage them
-        double meleeRange = 50; // Melee attack range
+        // double meleeRange = 50; // Melee attack range - Consider making this dynamic based on weapon
         for (Enemy enemy : enemies) {
             if (isInMeleeRange(player, enemy)) {
-                // Apply melee damage
-                double meleeDamage = 20;
+                // Apply melee damage from player's equipped weapon
+                double meleeDamage = player.getMeleeDamage(); 
                 enemy.takeDamage(meleeDamage);
                 soundManager.playSound("character");
                 
@@ -1818,7 +1818,7 @@ public class GameController {
         double distance = 100 + random.nextDouble() * 50;
         double enemyX = roomCenter.getX() + Math.cos(angle) * distance;
         double enemyY = roomCenter.getY() + Math.sin(angle) * distance;
-        
+                    
         // Create enemy with specified type
         Enemy enemy = new Enemy(enemyX, enemyY, type);
         
@@ -1904,7 +1904,7 @@ public class GameController {
             Point2D weaponPos = getRandomRoomPosition();
             Point2D armorPos = getRandomRoomPosition();
             Point2D potionPos = getRandomRoomPosition();
-            
+        
             // Spawn one of each item type
             spawnWeapon(weaponPos);
             spawnArmor(armorPos);
@@ -2433,8 +2433,8 @@ public class GameController {
                 enemy.setPosition(newPosition);
             } else {
                 // Normal movement towards player
-                if (distanceToPlayer > enemy.getSize() + player.getSize() + 5) {
-                    Point2D direction = playerCenter.subtract(enemyCenter).normalize();
+            if (distanceToPlayer > enemy.getSize() + player.getSize() + 5) {
+                Point2D direction = playerCenter.subtract(enemyCenter).normalize();
                     double baseSpeed = 50; // Reduced base speed from 100 to 50
                     double speed = baseSpeed * (1.0 + (currentLevel - 1) * 0.3); // Keep level scaling
                     
@@ -2450,11 +2450,11 @@ public class GameController {
                     
                     double dx = direction.getX() * speed * 0.3 * deltaTime;
                     double dy = direction.getY() * speed * 0.3 * deltaTime;
-                    
-                    Point2D newPosition = new Point2D(
-                        enemy.getPosition().getX() + dx,
-                        enemy.getPosition().getY() + dy
-                    );
+                
+                Point2D newPosition = new Point2D(
+                    enemy.getPosition().getX() + dx,
+                    enemy.getPosition().getY() + dy
+                );
                     
                     // Add boundary checking for enemies
                     double minX = 10;
@@ -2468,7 +2468,7 @@ public class GameController {
                         Math.max(minY, Math.min(maxY, newPosition.getY()))
                     );
                     
-                    enemy.setPosition(newPosition);
+                enemy.setPosition(newPosition);
                 } else {
                     // When enemy is close to player, still maintain direction for rotation
                     Point2D direction = playerCenter.subtract(enemyCenter).normalize();
@@ -2739,7 +2739,7 @@ public void openInventory() {
             
             // Center the window
             inventoryStage.centerOnScreen();
-                
+            
             // Show the inventory
             inventoryStage.show();
             
@@ -2905,46 +2905,33 @@ public void interactWithPuzzle() {
         
         Point2D itemPos = position.add(offsetX, offsetY);
         
-        // Determine reward item type
-        Item.ItemType itemType;
-        String itemName;
-        String itemDescription;
-        int itemValue;
-        boolean consumable;
-        
-        if (random.nextDouble() < 0.3) {
-            // 30% chance for a key
-            itemType = Item.ItemType.KEY;
-            itemName = "Dungeon Key";
-            itemDescription = "Opens locked doors";
-            itemValue = 1;
-            consumable = true;
-        } else if (random.nextDouble() < 0.6) {
-            // 30% chance for a weapon
-            itemType = Item.ItemType.WEAPON;
-            String[] weapons = {"Enchanted Sword", "Magic Staff", "Hunter's Bow"};
-            itemName = weapons[random.nextInt(weapons.length)];
-            itemDescription = "A powerful weapon";
-            itemValue = 10 + random.nextInt(10);
-            consumable = false;
-        } else {
-            // 40% chance for a potion
-            itemType = Item.ItemType.POTION;
-            itemName = "Health Potion";
-            itemDescription = "Restores health when consumed";
-            itemValue = 25 + random.nextInt(25);
-            consumable = true;
+        Item rewardItem = null;
+        double itemTypeRoll = random.nextDouble();
+
+        if (itemTypeRoll < 0.1) { // 10% chance for a key (optional, can be removed if not desired from puzzles)
+            rewardItem = new Item("Dungeon Key", "Opens locked doors", Item.ItemType.KEY, 1, true);
+        } else if (itemTypeRoll < 0.45) { // 35% chance for a weapon (10% to 45%)
+            // Create a random weapon (tier 1 for now)
+            rewardItem = Weapon.createRandomWeapon(1);
+        } else if (itemTypeRoll < 0.80) { // 35% chance for armor (45% to 80%)
+            // Create a random armor (tier 1 for now)
+            rewardItem = Armor.createRandomArmor(1);
+        } else { // 20% chance for a potion (80% to 100%)
+            rewardItem = new Item("Health Potion", "Restores health when consumed", Item.ItemType.POTION, 25 + random.nextInt(25), true);
         }
         
-        // Create and add the reward item
-        Item rewardItem = new Item(itemName, itemDescription, itemType, itemValue, consumable);
-        rewardItem.setX(itemPos.getX());
-        rewardItem.setY(itemPos.getY());
-        rewardItem.setSize(20);
-        roomItems.add(rewardItem);
-        
-        // Add visual effect for the reward
-        effectsManager.addExplosionEffect(itemPos, 1.0);
+        if (rewardItem != null) {
+            rewardItem.setX(itemPos.getX());
+            rewardItem.setY(itemPos.getY());
+            rewardItem.setSize(20); // Default item size on ground
+            roomItems.add(rewardItem);
+            
+            // Add visual effect for the reward
+            effectsManager.addExplosionEffect(itemPos, 1.0);
+            System.out.println("Puzzle solved, spawned item: " + rewardItem.getName() + " of type " + rewardItem.getType());
+        } else {
+            System.out.println("Puzzle solved, but failed to spawn a specific item type.");
+        }
     }
 
     private void showGameOverScreen() {
@@ -3147,23 +3134,33 @@ public void onPuzzleSolved(DungeonRoom room) {
     }
 
     private void firePlayerProjectile() {
-        // Create a new projectile attack from player position
-        Point2D playerPos = player.getPosition();
+        if (player == null || player.getEquippedWeapon() == null) {
+            System.out.println("Player has no equipped weapon to fire projectile.");
+            return; 
+        }
+
+        Point2D playerPos = player.getPosition().add(player.getSize() / 2, player.getSize() / 2); 
         Point2D targetPos = new Point2D(mouseX, mouseY);
         Point2D direction = targetPos.subtract(playerPos).normalize();
-        double damage = 15;
         
-        // Add projectile to player projectiles
+        Weapon equippedWeapon = player.getEquippedWeapon();
+        double damage = equippedWeapon.getDamage(); 
+        Color projectileColor = equippedWeapon.getWeaponType().getProjectileColor(); // Get color from WeaponType
+        
+        // Determine projectile type (optional, could be always ARROW or vary by weapon)
+        ProjectileAttack.ProjectileType projectileType = ProjectileAttack.ProjectileType.ARROW;
+        // Example: if (equippedWeapon.getWeaponType() == Weapon.WeaponType.STAFF) { projectileType = ProjectileAttack.ProjectileType.MAGIC_BOLT; }
+
         ProjectileAttack attack = new ProjectileAttack(
             playerPos.getX(), 
             playerPos.getY(), 
             direction, 
-            damage
+            damage,
+            projectileColor, // Use the dynamic color
+            projectileType 
         );
         playerProjectiles.add(attack);
         
-        // Add visual effect and sound
-        effectsManager.showFloatingText("Fired!", playerPos, Color.YELLOW);
         soundManager.playSound("character");
     }
 
