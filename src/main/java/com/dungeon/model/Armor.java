@@ -1,5 +1,7 @@
 package com.dungeon.model;
 
+import javafx.scene.paint.Color;
+
 /**
  * Represents armor that the player can equip to reduce damage from enemies
  */
@@ -12,16 +14,18 @@ public class Armor extends Item {
      * Types of armor with different attributes
      */
     public enum ArmorType {
-        LIGHT(0.7, 1.1),    // Light defense, high mobility
-        MEDIUM(1.0, 1.0),   // Balanced
-        HEAVY(1.5, 0.8);    // High defense, reduced mobility
+        LIGHT(0.7, 1.1, Color.LIGHTBLUE),    // Light defense, high mobility
+        MEDIUM(1.0, 1.0, Color.SLATEGRAY),   // Balanced
+        HEAVY(1.5, 0.8, Color.DARKRED);    // High defense, reduced mobility
         
         private final double defenseMultiplier;
         private final double mobilityFactor;
+        private final Color tintColor; // Color for visual effect
         
-        ArmorType(double defenseMultiplier, double mobilityFactor) {
+        ArmorType(double defenseMultiplier, double mobilityFactor, Color tintColor) {
             this.defenseMultiplier = defenseMultiplier;
             this.mobilityFactor = mobilityFactor;
+            this.tintColor = tintColor;
         }
         
         public double getDefenseMultiplier() {
@@ -31,6 +35,10 @@ public class Armor extends Item {
         public double getMobilityFactor() {
             return mobilityFactor;
         }
+
+        public Color getTintColor() {
+            return tintColor;
+        }
     }
     
     /**
@@ -39,10 +47,10 @@ public class Armor extends Item {
      * @param description Armor description
      * @param baseDefense Base defense value
      * @param armorType Type of armor
-     * @param iconPath Path to armor icon (optional)
+     * @param iconPath Path to armor icon (optional) - No longer used for rendering armor itself
      */
     public Armor(String name, String description, int baseDefense, ArmorType armorType, String iconPath) {
-        super(name, description, ItemType.ARMOR, baseDefense, false, iconPath);
+        super(name, description, ItemType.ARMOR, baseDefense, false, iconPath); // iconPath can still be used for inventory UI
         
         this.armorType = armorType;
         this.defense = (int)(baseDefense * armorType.getDefenseMultiplier());
@@ -50,14 +58,16 @@ public class Armor extends Item {
     }
     
     /**
-     * Creates a new armor piece with default icon
+     * Creates a new armor piece with default icon (null for now as armor images are not drawn on player)
      * @param name Armor name
      * @param description Armor description
      * @param baseDefense Base defense value
      * @param armorType Type of armor
      */
     public Armor(String name, String description, int baseDefense, ArmorType armorType) {
-        this(name, description, baseDefense, armorType, null);
+        // Pass null for iconPath as it's not used for player rendering, but ArmorType still has a color.
+        // If you still want icons for inventory UI, you'd need a different strategy for icon paths.
+        this(name, description, baseDefense, armorType, null); 
     }
     
     /**
