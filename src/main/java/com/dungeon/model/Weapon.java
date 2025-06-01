@@ -1,5 +1,7 @@
 package com.dungeon.model;
 
+import javafx.scene.paint.Color;
+
 /**
  * Represents a weapon that the player can equip to deal damage to enemies
  */
@@ -13,22 +15,24 @@ public class Weapon extends Item {
      * Types of weapons with different attributes
      */
     public enum WeaponType {
-        SWORD(1.0, 50, 1.5, "/com/dungeon/assets/images/sword.png"),    // Balanced
-        DAGGER(0.7, 40, 2.0, "/com/dungeon/assets/images/dagger.png"),   // Fast but short range
-        AXE(1.3, 45, 1.0, "/com/dungeon/assets/images/axe.png"),      // High damage but slow
-        SPEAR(0.9, 70, 1.2, "/com/dungeon/assets/images/spear.png"),    // Long range
-        BOW(0.8, 200, 0.8, "/com/dungeon/assets/images/bow.png");     // Ranged weapon
+        SWORD(1.0, 50, 1.5, "/com/dungeon/assets/images/SWORD.png", Color.LIGHTGRAY),    // Balanced
+        DAGGER(0.7, 40, 2.0, "/com/dungeon/assets/images/DAGGER.png", Color.SILVER),   // Fast but short range
+        AXE(1.3, 45, 1.0, "/com/dungeon/assets/images/AXE.png", Color.BROWN),      // High damage but slow
+        SPEAR(0.9, 70, 1.2, "/com/dungeon/assets/images/SPEAR.png", Color.SANDYBROWN),    // Long range
+        BOW(0.8, 200, 0.8, "/com/dungeon/assets/images/BOW.png", Color.GREENYELLOW);     // Ranged weapon
         
         private final double damageMultiplier;
         private final double range;
         private final double speedMultiplier;
         private final String imagePath;
+        private final Color projectileColor; // Added for projectile visual
         
-        WeaponType(double damageMultiplier, double range, double speedMultiplier, String imagePath) {
+        WeaponType(double damageMultiplier, double range, double speedMultiplier, String imagePath, Color projectileColor) {
             this.damageMultiplier = damageMultiplier;
             this.range = range;
             this.speedMultiplier = speedMultiplier;
             this.imagePath = imagePath;
+            this.projectileColor = projectileColor;
         }
         
         public double getDamageMultiplier() {
@@ -45,6 +49,10 @@ public class Weapon extends Item {
         
         public String getImagePath() {
             return imagePath;
+        }
+
+        public Color getProjectileColor() {
+            return projectileColor;
         }
     }
     
