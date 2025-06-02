@@ -323,15 +323,17 @@ public class Puzzle {
 
             default: // Word chain
                 String[] wordChains = {
-                    "COLD -> WARM -> HOT", "COLD",
-                    "SMILE -> LAUGH -> CRY", "SMILE",
-                    "START -> BEGIN -> END", "START",
-                    "UP -> DOWN -> SIDE", "UP",
-                    "DAY -> NIGHT -> MORNING", "DAY"
+                    "COLD -> WARM -> HOT", "COLD", "WARM", "HOT",
+                    "SMILE -> LAUGH -> CRY", "SMILE", "LAUGH", "CRY",
+                    "START -> BEGIN -> END", "START", "BEGIN", "END",
+                    "UP -> DOWN -> SIDE", "UP", "DOWN", "SIDE",
+                    "DAY -> NIGHT -> MORNING", "DAY", "NIGHT", "MORNING"
                 };
-                index = random.nextInt(wordChains.length / 2) * 2;
-                question = "What's the first word in this chain: " + wordChains[index];
-                answer = wordChains[index + 1];
+                index = random.nextInt(wordChains.length / 4) * 4;
+                int position = random.nextInt(3); // 0 for first, 1 for middle, 2 for last
+                String positionText = position == 0 ? "first" : (position == 1 ? "middle" : "last");
+                question = "What's the " + positionText + " word in this chain: " + wordChains[index];
+                answer = wordChains[index + 1 + position];
                 break;
         }
 
@@ -348,14 +350,21 @@ public class Puzzle {
         switch (puzzleType) {
             case 0: // Color sequence
                 String[] colors = {"RED", "BLUE", "GREEN", "YELLOW", "PURPLE"};
+                // Create a repeating pattern of 3 colors
+                int patternLength = 3;
                 int[] sequence = new int[4];
+                int startColor = random.nextInt(colors.length);
+                
+                // Generate a sequence that repeats every 3 colors
                 for (int i = 0; i < sequence.length; i++) {
-                    sequence[i] = random.nextInt(colors.length);
+                    sequence[i] = (startColor + i) % patternLength;
                 }
+                
                 question = "What color comes next in this sequence: " +
                           colors[sequence[0]] + ", " + colors[sequence[1]] + ", " +
                           colors[sequence[2]] + ", " + colors[sequence[3]] + ", ?";
-                answer = colors[sequence[3]];
+                // The answer is the next color in the repeating pattern
+                answer = colors[(startColor + 4) % patternLength];
                 break;
 
             case 1: // True/False logic

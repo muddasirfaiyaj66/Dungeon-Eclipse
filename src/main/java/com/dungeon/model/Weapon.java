@@ -6,7 +6,8 @@ import javafx.scene.paint.Color;
  * Represents a weapon that the player can equip to deal damage to enemies
  */
 public class Weapon extends Item {
-    private int damage;
+    private int damage; // This will store the calculated damage
+    private final int baseDamage; // Stores the original base damage
     private double attackRange;
     private double attackSpeed; // Attacks per second
     private WeaponType weaponType;
@@ -66,18 +67,27 @@ public class Weapon extends Item {
     public Weapon(String name, String description, int baseDamage, WeaponType weaponType) {
         super(name, description, ItemType.WEAPON, baseDamage, false, weaponType.getImagePath());
         
+        this.baseDamage = baseDamage; // Initialize baseDamage
         this.weaponType = weaponType;
-        this.damage = (int)(baseDamage * weaponType.getDamageMultiplier());
+        this.damage = (int)(baseDamage * weaponType.getDamageMultiplier()); // Calculated damage
         this.attackRange = weaponType.getRange();
         this.attackSpeed = 1.0 * weaponType.getSpeedMultiplier();
     }
     
     /**
-     * Gets the weapon's damage value
-     * @return Damage value
+     * Gets the weapon's calculated damage value
+     * @return Calculated damage value
      */
     public int getDamage() {
         return damage;
+    }
+
+    /**
+     * Gets the weapon's original base damage value
+     * @return Original base damage value
+     */
+    public int getBaseDamage() {
+        return baseDamage;
     }
     
     /**

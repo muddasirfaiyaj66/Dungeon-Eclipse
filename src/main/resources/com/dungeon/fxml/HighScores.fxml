@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<VBox alignment="CENTER" spacing="20.0" style="-fx-background-color: #2b2b2b; -fx-padding: 20;" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.dungeon.controllers.HighScoresController">
+    <children>
+        <Label text="High Scores" textFill="white">
+            <font>
+                <Font name="Arial Bold" size="36.0" />
+            </font>
+        </Label>
+        <ListView fx:id="highScoresListView" prefHeight="300.0" prefWidth="300.0" style="-fx-background-color: #3c3f41; -fx-text-fill: white;"/>
+        <Button fx:id="backButton" mnemonicParsing="false" onAction="#handleBackButtonAction" style="-fx-background-color: #555555; -fx-text-fill: white; -fx-font-size: 18px;" text="Back to Main Menu">
+            <VBox.margin>
+                <Insets top="20.0" />
+            </VBox.margin>
+        </Button>
+    </children>
+</VBox> 

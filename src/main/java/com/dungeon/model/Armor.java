@@ -2,34 +2,27 @@ package com.dungeon.model;
 
 import javafx.scene.paint.Color;
 
-/**
- * Represents armor that the player can equip to reduce damage from enemies
- */
 public class Armor extends Item {
-    private int defense;
     private double mobilityFactor; // Affects movement speed (lower = slower)
     private ArmorType armorType;
     
-    /**
-     * Types of armor with different attributes
-     */
     public enum ArmorType {
-        LIGHT(0.7, 1.1, Color.LIGHTBLUE),    // Light defense, high mobility
-        MEDIUM(1.0, 1.0, Color.SLATEGRAY),   // Balanced
-        HEAVY(1.5, 0.8, Color.DARKRED);    // High defense, reduced mobility
+        LIGHT(0.10, 1.1, Color.LIGHTBLUE),    // 10% damage reduction
+        MEDIUM(0.20, 1.0, Color.SLATEGRAY),   // 20% damage reduction
+        HEAVY(0.30, 0.8, Color.DARKRED);     // 30% damage reduction
         
-        private final double defenseMultiplier;
+        private final double damageReductionPercentage;
         private final double mobilityFactor;
         private final Color tintColor; // Color for visual effect
         
-        ArmorType(double defenseMultiplier, double mobilityFactor, Color tintColor) {
-            this.defenseMultiplier = defenseMultiplier;
+        ArmorType(double damageReductionPercentage, double mobilityFactor, Color tintColor) {
+            this.damageReductionPercentage = damageReductionPercentage;
             this.mobilityFactor = mobilityFactor;
             this.tintColor = tintColor;
         }
         
-        public double getDefenseMultiplier() {
-            return defenseMultiplier;
+        public double getDamageReductionPercentage() {
+            return damageReductionPercentage;
         }
         
         public double getMobilityFactor() {
@@ -45,15 +38,13 @@ public class Armor extends Item {
      * Creates a new armor piece
      * @param name Armor name
      * @param description Armor description
-     * @param baseDefense Base defense value
      * @param armorType Type of armor
-     * @param iconPath Path to armor icon (optional) - No longer used for rendering armor itself
+     * @param iconPath Path to the armor icon (can be null if not used)
      */
-    public Armor(String name, String description, int baseDefense, ArmorType armorType, String iconPath) {
-        super(name, description, ItemType.ARMOR, baseDefense, false, iconPath); // iconPath can still be used for inventory UI
+    public Armor(String name, String description, ArmorType armorType, String iconPath) {
         
+        super(name, description, ItemType.ARMOR, 0, false, iconPath); 
         this.armorType = armorType;
-        this.defense = (int)(baseDefense * armorType.getDefenseMultiplier());
         this.mobilityFactor = armorType.getMobilityFactor();
     }
     
@@ -61,21 +52,10 @@ public class Armor extends Item {
      * Creates a new armor piece with default icon (null for now as armor images are not drawn on player)
      * @param name Armor name
      * @param description Armor description
-     * @param baseDefense Base defense value
      * @param armorType Type of armor
      */
-    public Armor(String name, String description, int baseDefense, ArmorType armorType) {
-        // Pass null for iconPath as it's not used for player rendering, but ArmorType still has a color.
-        // If you still want icons for inventory UI, you'd need a different strategy for icon paths.
-        this(name, description, baseDefense, armorType, null); 
-    }
-    
-    /**
-     * Gets the armor's defense value
-     * @return Defense value
-     */
-    public int getDefense() {
-        return defense;
+    public Armor(String name, String description, ArmorType armorType) {
+        this(name, description, armorType, null);
     }
     
     /**
@@ -99,8 +79,9 @@ public class Armor extends Item {
      * @return Basic leather armor
      */
     public static Armor createBasicArmor() {
+        // baseDefense is no longer used in constructor
         return new Armor("Leather Armor", "Basic protection that doesn't restrict movement",
-                5, ArmorType.LIGHT);
+                ArmorType.LIGHT);
     }
     
     /**
@@ -109,22 +90,18 @@ public class Armor extends Item {
      * @return A randomly generated armor piece
      */
     public static Armor createRandomArmor(int tier) {
-        // Clamp tier between 1-3
         tier = Math.max(1, Math.min(3, tier));
+        // baseDefense is no longer used in constructor
         
-        // Base defense increases with tier
-        int baseDefense = 5 + (tier - 1) * 5;
-        
-        // Random armor type
         ArmorType[] types = ArmorType.values();
         ArmorType randomType = types[(int)(Math.random() * types.length)];
         
-        // Generate name and description based on tier and type
         String[] tierNames = {"Basic", "Reinforced", "Masterwork"};
         String name = tierNames[tier - 1] + " " + getArmorTypeName(randomType);
         String description = generateDescription(randomType, tier);
         
-        return new Armor(name, description, baseDefense, randomType);
+        // Pass randomType to the constructor
+        return new Armor(name, description, randomType);
     }
     
     /**
@@ -144,16 +121,17 @@ public class Armor extends Item {
      */
     private static String generateDescription(ArmorType type, int tier) {
         String quality = (tier == 1) ? "adequate" : (tier == 2) ? "good" : "excellent";
+        String reduction = (int)(type.getDamageReductionPercentage() * 100) + "%";
         
         switch (type) {
             case LIGHT:
-                return "A " + quality + " set of light leather armor that allows quick movement.";
+                return "A " + quality + " set of light leather armor. Reduces damage by " + reduction + ". Allows quick movement.";
             case MEDIUM:
-                return "A " + quality + " chainmail suit offering balanced protection and mobility.";
+                return "A " + quality + " chainmail suit. Reduces damage by " + reduction + ". Offers balanced protection and mobility.";
             case HEAVY:
-                return "A " + quality + " plate armor providing strong protection at the cost of mobility.";
+                return "A " + quality + " plate armor. Reduces damage by " + reduction + ". Provides strong protection at the cost of mobility.";
             default:
-                return "A " + quality + " set of armor.";
+                return "A " + quality + " set of armor. Reduces damage by " + reduction + ".";
         }
     }
 } 

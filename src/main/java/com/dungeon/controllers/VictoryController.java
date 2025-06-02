@@ -1,13 +1,17 @@
 package com.dungeon.controllers;
 
+import com.dungeon.data.ScoreManager;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
+
+import java.util.Optional;
 
 public class VictoryController {
     @FXML
@@ -43,14 +47,32 @@ public class VictoryController {
         this.enemiesDefeated = enemiesDefeated;
         this.currentLevel = level;
         
-        String levelText = level == 3 ? "You have completed the final level!" : "You have completed level " + level + "!";
+        String levelText = level >= 3 ? "Congratulations! You have defeated the final boss and won the game!" : "Victory! You have completed level " + level + "!";
         congratsText.setText(levelText);
         scoreText.setText("Final Score: " + score);
         timeText.setText("Time: " + timeElapsed);
         enemiesText.setText("Enemies Defeated: " + enemiesDefeated);
         
-        // Disable next level button if on final level
-        nextLevelButton.setDisable(level >= 3);
+        // Disable next level button if on final level (e.g. level 3 or higher based on game design)
+        nextLevelButton.setDisable(level >= 3); 
+
+        // Prompt for player name and save score
+        // Run on JavaFX application thread to ensure UI operations are safe
+        Platform.runLater(() -> {
+            TextInputDialog dialog = new TextInputDialog("Player");
+            dialog.setTitle("Victory!");
+            dialog.setHeaderText("You won with a score of: " + score + "! Enter your name for the high scores:");
+            dialog.setContentText("Name:");
+
+            Optional<String> result = dialog.showAndWait();
+            result.ifPresent(name -> {
+                if (!name.trim().isEmpty()) {
+                    ScoreManager.saveScore(name, this.score);
+                } else {
+                    ScoreManager.saveScore("Champion", this.score); // Default name for victors
+                }
+            });
+        });
     }
     
     public void setGameController(GameController gameController) {
@@ -60,6 +82,8 @@ public class VictoryController {
     @FXML
     @SuppressWarnings("unused")
     private void startNextLevel() {
+        if (currentLevel >= 3) return; // Should not happen if button is disabled, but good check
+
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/dungeon/fxml/GameScene.fxml"));
             Parent gameRoot = loader.load();
@@ -79,13 +103,13 @@ public class VictoryController {
                 stage.show();
             }
             
-            GameController gameController = loader.getController();
+            GameController newGameController = loader.getController(); // Renamed for clarity
             Platform.runLater(() -> {
                 System.out.println("Initializing game controller for next level...");
-                gameController.onSceneReady();
+                newGameController.onSceneReady();
                 
                 // Set the next level - add 1 to current level
-                gameController.setLevel(currentLevel + 1);
+                newGameController.setLevel(this.currentLevel + 1);
                 
                 // Force focus on the game canvas
                 gameScene.getRoot().requestFocus();

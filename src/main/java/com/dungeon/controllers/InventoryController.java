@@ -10,6 +10,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ListCell;
 import javafx.stage.Stage;
+import java.util.List;
 
 public class InventoryController {
     @FXML
@@ -93,6 +94,14 @@ public class InventoryController {
                 if (item instanceof Weapon) {
                     Weapon weapon = (Weapon) item;
                     player.setEquippedWeapon(weapon);
+                    player.setWeapon(weapon);
+                    
+                    List<Weapon> playerWeapons = player.getWeapons();
+                    if (!playerWeapons.contains(weapon)) {
+                        playerWeapons.removeIf(w -> w.getName().equals(weapon.getName()));
+                        playerWeapons.add(weapon);
+                    }
+                    player.selectWeapon(playerWeapons.indexOf(weapon));
                 }
                 break;
                 
@@ -135,14 +144,43 @@ public class InventoryController {
             double offsetX = Math.cos(angle) * distance;
             double offsetY = Math.sin(angle) * distance;
             
-            // Create a new item instance at offset position from player
-            Item droppedItem = new Item(
-                selectedItem.getName(),
-                selectedItem.getDescription(),
-                selectedItem.getType(),
-                selectedItem.getValue(),
-                selectedItem.isConsumable()
-            );
+            Item droppedItem;
+            if (selectedItem instanceof Weapon) {
+                Weapon weaponToDrop = (Weapon) selectedItem;
+                droppedItem = new Weapon(
+                    weaponToDrop.getName(),
+                    weaponToDrop.getDescription(),
+                    weaponToDrop.getBaseDamage(),
+                    weaponToDrop.getWeaponType()
+                );
+                 // Unequip the item if it's a weapon or armor
+                Weapon currentWeapon = player.getEquippedWeapon();
+                if (currentWeapon != null && currentWeapon.equals(selectedItem)) {
+                    player.setEquippedWeapon(null);
+                    player.setWeapon(null); // Also clear currentWeapon if it was the one dropped
+                }
+            } else if (selectedItem instanceof Armor) {
+                Armor armorToDrop = (Armor) selectedItem;
+                droppedItem = new Armor(
+                    armorToDrop.getName(),
+                    armorToDrop.getDescription(),
+                    armorToDrop.getArmorType()
+                );
+                // Unequip the item if it's a weapon or armor
+                Armor currentArmor = player.getEquippedArmor();
+                if (currentArmor != null && currentArmor.equals(selectedItem)) {
+                    player.setEquippedArmor(null);
+                }
+            } else {
+                 droppedItem = new Item(
+                    selectedItem.getName(),
+                    selectedItem.getDescription(),
+                    selectedItem.getType(),
+                    selectedItem.getValue(),
+                    selectedItem.isConsumable()
+                );
+            }
+
             droppedItem.setX(playerX + offsetX);
             droppedItem.setY(playerY + offsetY);
             droppedItem.setSize(20); // Set appropriate size for the dropped item

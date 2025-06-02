@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.io.IOException; 
 
 import com.dungeon.audio.SoundManager;
 import com.dungeon.effects.EffectsManager;
@@ -214,21 +215,21 @@ public class GameController {
         
         // Center the pause menu in the canvasContainer instead of rootPane
         // This ensures it stays within the game area
-        pauseMenu.setLayoutX((canvasContainer.getWidth() - pauseMenu.getPrefWidth()) / 2);
-        pauseMenu.setLayoutY((canvasContainer.getHeight() - pauseMenu.getPrefHeight()) / 2);
+        // pauseMenu.setLayoutX((canvasContainer.getWidth() - pauseMenu.getPrefWidth()) / 2);
+        // pauseMenu.setLayoutY((canvasContainer.getHeight() - pauseMenu.getPrefHeight()) / 2);
         
         // Add positioning listeners to keep menu centered when window is resized
-        canvasContainer.widthProperty().addListener((obs, oldVal, newVal) -> {
-            if (pauseMenu != null) {
-                pauseMenu.setLayoutX((newVal.doubleValue() - pauseMenu.getWidth()) / 2);
-            }
-        });
+        // canvasContainer.widthProperty().addListener((obs, oldVal, newVal) -> {
+        //     if (pauseMenu != null) {
+        //         pauseMenu.setLayoutX((newVal.doubleValue() - pauseMenu.getWidth()) / 2);
+        //     }
+        // });
         
-        canvasContainer.heightProperty().addListener((obs, oldVal, newVal) -> {
-            if (pauseMenu != null) {
-                pauseMenu.setLayoutY((newVal.doubleValue() - pauseMenu.getHeight()) / 2);
-            }
-        });
+        // canvasContainer.heightProperty().addListener((obs, oldVal, newVal) -> {
+        //     if (pauseMenu != null) {
+        //         pauseMenu.setLayoutY((newVal.doubleValue() - pauseMenu.getHeight()) / 2);
+        //     }
+        // });
         
         // Initially hide the pause menu
         pauseMenu.setVisible(false);
@@ -245,12 +246,12 @@ public class GameController {
         
         if (isPaused) {
             // Update position to ensure it's centered correctly
-            double menuWidth = pauseMenu.prefWidth(-1); // Get preferred width
-            double menuHeight = pauseMenu.prefHeight(-1); // Get preferred height
+            // double menuWidth = pauseMenu.prefWidth(-1); 
+            // double menuHeight = pauseMenu.prefHeight(-1);
             
             // Center in canvas container
-            pauseMenu.setLayoutX((canvasContainer.getWidth() - menuWidth) / 2);
-            pauseMenu.setLayoutY((canvasContainer.getHeight() - menuHeight) / 2);
+            // pauseMenu.setLayoutX((canvasContainer.getWidth() - menuWidth) / 2);
+            // pauseMenu.setLayoutY((canvasContainer.getHeight() - menuHeight) / 2);
             
             pauseMenu.setVisible(true);
             pauseMenu.toFront(); // Ensure it's on top
@@ -283,16 +284,65 @@ public class GameController {
     }
     
     private void showOptions() {
-        // In a full implementation, you would show options dialog
-        // For now, just show a message
-        System.out.println("Options would be shown here");
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/dungeon/fxml/Options.fxml"));
+            Parent optionsRoot = loader.load();
+
+            
+            Scene optionsScene = new Scene(optionsRoot);
+
+            // Apply stylesheet (optional, but good for consistency)
+            try {
+                String cssPath = "/com/dungeon/styles/main.css"; 
+                String css = getClass().getResource(cssPath).toExternalForm();
+                if (css != null) {
+                    optionsScene.getStylesheets().add(css);
+                } else {
+                    System.out.println("Options stylesheet not found at: " + cssPath);
+                }
+            } catch (NullPointerException e) {
+                System.out.println("Options stylesheet not found or error constructing path: " + e.getMessage());
+            }
+
+            Stage optionsStage = new Stage();
+            optionsStage.setTitle("Sound Options");
+            optionsStage.initModality(Modality.APPLICATION_MODAL); // Block interaction with game window
+            
+            // Set owner to the main game stage
+            if (gameCanvas != null && gameCanvas.getScene() != null && gameCanvas.getScene().getWindow() != null) {
+                 optionsStage.initOwner(gameCanvas.getScene().getWindow());
+            } else if (rootPane != null && rootPane.getScene() != null && rootPane.getScene().getWindow() != null) {
+                 optionsStage.initOwner(rootPane.getScene().getWindow());
+            }
+
+            
+
+            optionsStage.setScene(optionsScene);
+            optionsStage.setResizable(false); // Typically options dialogs are not resizable
+            
+            System.out.println("Showing options window (modal). Game remains paused.");
+            optionsStage.showAndWait(); // Show and wait for it to be closed
+
+            System.out.println("Options window closed. Requesting focus back to game canvas.");
+            
+            if (gameCanvas != null) {
+                gameCanvas.requestFocus();
+            }
+
+        } catch (IOException e) {
+            System.err.println("Error loading Options.fxml from GameController: " + e.getMessage());
+            e.printStackTrace();
+            // Optionally show an error alert to the user here
+        } catch (Exception e) {
+            System.err.println("An unexpected error occurred while trying to show options: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
     
     private void exitToMainMenu() {
         loadMainMenu();
     }
 
-    // Add this new method to consistently load the main menu
     private void loadMainMenu() {
         try {
             System.out.println("Loading main menu...");
@@ -327,11 +377,11 @@ public class GameController {
             else if (rootPane != null && rootPane.getScene() != null && rootPane.getScene().getWindow() != null) {
                 stage = (Stage) rootPane.getScene().getWindow();
                 System.out.println("Got stage from rootPane");
-            } 
-            // If still null, try alternate approaches by looking in the current scenes
+            }
+           
             else {
                 System.out.println("Could not get stage from standard components, looking for active stages");
-                // This is a bit of a hack, but it can help us find the current window
+                
                 for (javafx.stage.Window window : javafx.stage.Window.getWindows()) {
                     if (window instanceof Stage && window.isShowing()) {
                         stage = (Stage) window;
@@ -365,42 +415,37 @@ public class GameController {
     @FXML
     public void initialize() {
         soundManager = SoundManager.getInstance();
-        soundManager.playSound("start"); // Play start sound immediately
+        // DEFERRED: soundManager.playSound("start");
         
-        // Load enemy images
         loadEnemyImages();
+        loadWeaponImages();
         
         dungeonGenerator = new DungeonGenerator();
-        dungeonRenderer = new DungeonRenderer(gameCanvas);
+        // DEFERRED: dungeonRenderer = new DungeonRenderer(gameCanvas);
         activeKeys = new HashSet<>();
         enemies = new ArrayList<>();
         roomItems = new ArrayList<>();
         puzzles = new java.util.HashMap<>();
         doors = new ArrayList<>();
         playerProjectiles = new ArrayList<>();
-        enemyProjectiles = new ArrayList<>();
-        effectsManager = new EffectsManager(rootPane, gameCanvas);
+        // DEFERRED: effectsManager = new EffectsManager(rootPane, gameCanvas);
         floatingTexts = new ArrayList<>();
         random = new Random();
         timeSinceLastSpawn = 0;
         bossDefeated = false;
-        gameLoopRunning = true;
+        // gameLoopRunning will be managed by startGameLoop
         roomTransitionInProgress = false;
         roomCleared = false;
         puzzleCompleted = false;
         
-        // Set the start time when game begins
-        startTime = System.currentTimeMillis();
+        // DEFERRED: startTime = System.currentTimeMillis();
         
-        // Create the pause menu
-        createPauseMenu();
+        createPauseMenu(); // UI structure, should be fine here
         
-        setupGame();
-        startGameLoop();
+        // DEFERRED: setupGame();
+        // DEFERRED: startGameLoop();
         
-        gc = gameCanvas.getGraphicsContext2D();
-        loadEnemyImages();
-        loadWeaponImages();
+        // DEFERRED: gc = gameCanvas.getGraphicsContext2D();
     }
 
     private void loadEnemyImages() {
@@ -420,15 +465,34 @@ public class GameController {
         // Setup input handling
         setupInputHandling();
         
-        // Initialize lighting effect after canvas is attached to scene
-        lightingEffect = new LightingEffect(gameCanvas);
+        if (gameCanvas != null) {
+            dungeonRenderer = new DungeonRenderer(gameCanvas);
+            gc = gameCanvas.getGraphicsContext2D();
+            lightingEffect = new LightingEffect(gameCanvas); // Initialize lighting effect
+            if (rootPane != null) { // rootPane should also be available here
+                 effectsManager = new EffectsManager(rootPane, gameCanvas);
+            } else {
+                 System.err.println("ERROR: rootPane is null in onSceneReady, effectsManager not fully initialized.");
+            }
+        } else {
+            System.err.println("ERROR: gameCanvas is null in onSceneReady, cannot initialize gc, dungeonRenderer, lightingEffect or effectsManager.");
+            // Consider returning or throwing an error to prevent further execution
+            return; 
+        }
         
         // Setup window resize handling
         handleResize();
         
+        startTime = System.currentTimeMillis();
+        setupGame();
+        startGameLoop();
+        soundManager.playSound("start");
+        
         // Request focus on the canvas so it can receive key events
-        gameCanvas.setFocusTraversable(true);
-        gameCanvas.requestFocus();
+        if (gameCanvas != null) {
+            gameCanvas.setFocusTraversable(true);
+            gameCanvas.requestFocus();
+        }
     }
 
     private void setupGame() {
@@ -550,6 +614,7 @@ public class GameController {
             } else if (e.getCode() == KeyCode.ESCAPE) {
                 // Toggle pause menu
                 togglePauseGame();
+                e.consume(); // Consume the event to prevent default JavaFX full-screen exit
             }
             
             // Handle projectile attack with E key
@@ -628,8 +693,7 @@ public class GameController {
     }
 
     private void attackEnemiesInRange() {
-        // Find enemies in melee range and damage them
-        // double meleeRange = 50; // Melee attack range - Consider making this dynamic based on weapon
+        
         for (Enemy enemy : enemies) {
             if (isInMeleeRange(player, enemy)) {
                 // Apply melee damage from player's equipped weapon
@@ -645,7 +709,7 @@ public class GameController {
     }
 
     private void startGameLoop() {
-        // Don't create a new AnimationTimer if we already have one running
+        
         if (gameLoopRunning) {
         lastUpdateTime = System.nanoTime();
         
@@ -922,7 +986,7 @@ public class GameController {
                 }
                 break;
             case TREASURE:
-                // No longer set treasureClearedInLevel or createDoors here; handled in checkItemPickups
+                
                 break;
             case BOSS:
                 if (enemies.isEmpty() || enemies.stream().allMatch(enemy -> enemy.getHealth() <= 0)) {
@@ -1639,7 +1703,7 @@ public class GameController {
             } else if (currentRoom.getType() == DungeonRoom.RoomType.PUZZLE) {
                 if (roomType == DungeonRoom.RoomType.TREASURE) {
                     // Treasure room door requires key and is locked until puzzle is solved
-                    door.setLocked(!puzzleSolved);
+                    door.setLocked(true);
                     door.setRequiresKey(true);
                 } else if (roomType == DungeonRoom.RoomType.COMBAT) {
                     // Combat room door is always locked in puzzle room
@@ -1862,7 +1926,7 @@ public class GameController {
         roomItems.add(weapon);
     }
     
-    private void spawnArmor(Point2D position) {
+        private void spawnArmor(Point2D position) {
         // Randomly select an armor type
         Armor.ArmorType[] armorTypes = Armor.ArmorType.values();
         Armor.ArmorType randomType = armorTypes[(int)(Math.random() * armorTypes.length)];
@@ -1871,8 +1935,7 @@ public class GameController {
         Armor armor = new Armor(
             randomType.name(), // Use enum name as armor name
             "A " + randomType.name().toLowerCase() + " for protection", // Basic description
-            15, // Base defense
-            randomType
+            randomType // Corrected: removed the baseDefense integer
         );
         
         // Set position and size
@@ -2432,45 +2495,56 @@ public class GameController {
                 
                 enemy.setPosition(newPosition);
             } else {
-                // Normal movement towards player
-            if (distanceToPlayer > enemy.getSize() + player.getSize() + 5) {
-                Point2D direction = playerCenter.subtract(enemyCenter).normalize();
-                    double baseSpeed = 50; // Reduced base speed from 100 to 50
-                    double speed = baseSpeed * (1.0 + (currentLevel - 1) * 0.3); // Keep level scaling
-                    
-                    // Increase speed and approach tendency for boss
-                    if (enemy.getType() == Enemy.EnemyType.BOSS) {
-                        speed *= 1.5; // 50% faster movement for boss
-                        // Add a stronger tendency to approach the player
-                        direction = direction.multiply(1.5); // Increase movement force towards player
+                // Normal movement logic
+                boolean shouldMoveTowardsPlayer = false;
+                if (enemy.getType() == Enemy.EnemyType.BOSS) {
+                    shouldMoveTowardsPlayer = true; // Boss always moves towards player if not bouncing back
+                } else {
+                    if (distanceToPlayer > enemy.getSize() + player.getSize() + 5) {
+                        shouldMoveTowardsPlayer = true; // Other enemies move if far enough
                     }
-                    
-                    // Set velocity for proper rotation
-                    enemy.setVelocity(direction.multiply(speed));
-                    
-                    double dx = direction.getX() * speed * 0.3 * deltaTime;
-                    double dy = direction.getY() * speed * 0.3 * deltaTime;
-                
-                Point2D newPosition = new Point2D(
-                    enemy.getPosition().getX() + dx,
-                    enemy.getPosition().getY() + dy
-                );
-                    
-                    // Add boundary checking for enemies
+                }
+
+                if (shouldMoveTowardsPlayer) {
+                    Point2D normalizedDirection = playerCenter.subtract(enemyCenter).normalize();
+                    Point2D effectiveMovementDirection = normalizedDirection; // Start with normalized
+
+                    double baseSpeed = 50; // Base speed for enemies
+                    double actualSpeed = baseSpeed * (1.0 + (currentLevel - 1) * 0.3); // Scale speed with level
+
+                    if (enemy.getType() == Enemy.EnemyType.BOSS) {
+                        actualSpeed *= 1.5; // Boss specific speed multiplier
+                        // Apply the "stronger tendency" by scaling the direction vector
+                        effectiveMovementDirection = normalizedDirection.multiply(1.5);
+                    }
+
+                    // Set velocity for proper rotation (uses effectiveMovementDirection which might be non-unit for boss)
+                    enemy.setVelocity(effectiveMovementDirection.multiply(actualSpeed));
+
+                    // Actual movement based on dx, dy, using the 0.3 factor from original logic
+                    double dx = effectiveMovementDirection.getX() * actualSpeed * 0.3 * deltaTime;
+                    double dy = effectiveMovementDirection.getY() * actualSpeed * 0.3 * deltaTime;
+
+                    Point2D newPosition = new Point2D(
+                        enemy.getPosition().getX() + dx,
+                        enemy.getPosition().getY() + dy
+                    );
+
+                    // Boundary checking for enemies
                     double minX = 10;
                     double minY = 10;
                     double maxX = gameCanvas.getWidth() - enemy.getSize() - 10;
                     double maxY = gameCanvas.getHeight() - enemy.getSize() - 10;
-                    
+
                     // Ensure enemy stays within bounds
                     newPosition = new Point2D(
                         Math.max(minX, Math.min(maxX, newPosition.getX())),
                         Math.max(minY, Math.min(maxY, newPosition.getY()))
                     );
-                    
-                enemy.setPosition(newPosition);
+                    enemy.setPosition(newPosition);
                 } else {
-                    // When enemy is close to player, still maintain direction for rotation
+                    // This 'else' now only applies to non-boss enemies that are too close
+                    // For non-boss enemies close to the player, maintain direction for rotation
                     Point2D direction = playerCenter.subtract(enemyCenter).normalize();
                     enemy.setVelocity(direction.multiply(0.1)); // Small velocity to maintain direction
                 }
@@ -2508,11 +2582,21 @@ public class GameController {
                     
                     // Apply damage to player
                     player.takeDamage(damage);
+                    double damageBlocked = player.getLastDamageBlocked(); // Get amount blocked
                     
-                    // Show damage text with enemy type
-                    String enemyType = enemy.getType().toString();
-                    effectsManager.showFloatingText("-" + (int)damage + " (" + enemyType + ")", 
-                        playerCenter, Color.RED);
+                    // Show floating text for damage blocked by armor
+                    if (damageBlocked > 0) {
+                        effectsManager.showFloatingText("Blocked: " + String.format("%.0f", damageBlocked), 
+                            playerCenter.add(0, -15), Color.LIGHTBLUE); // Display slightly above actual damage
+                    }
+
+                    // Show damage text with enemy type (actual damage dealt)
+                    double actualDamageDealtToPlayer = damage - damageBlocked;
+                    if (actualDamageDealtToPlayer > 0) {
+                        String enemyType = enemy.getType().toString();
+                        effectsManager.showFloatingText("-" + String.format("%.0f", actualDamageDealtToPlayer) + " (" + enemyType + ")", 
+                            playerCenter, Color.RED);
+                    }
                     
                     // Play hit sound
                     soundManager.playSound("character");
@@ -2568,12 +2652,9 @@ public class GameController {
         }
         
         // Scale damage with level
-        double levelMultiplier = 1.0 + (currentLevel - 1) * 0.2;
         
-        // Add some randomness to damage (±20%)
-        double randomFactor = 0.8 + (random.nextDouble() * 0.4);
         
-        return baseDamage * levelMultiplier * randomFactor;
+        return baseDamage;
 }
 
 private void updateProjectiles(double deltaTime) {
@@ -2618,12 +2699,24 @@ private void updateProjectiles(double deltaTime) {
                 double playerSize = player.getSize();
                 
                 if (checkCollision(projectilePos, projectileSize, playerPos, playerSize)) {
-                    // Apply damage to player
-                    player.takeDamage(projectile.getDamage());
+                    double projectileDamage = projectile.getDamage(); // Store original projectile damage
                     
-                    // Show damage text
-                    effectsManager.showFloatingText("-" + (int)projectile.getDamage(), 
-                        playerPos, Color.RED);
+                    // Apply damage to player
+                    player.takeDamage(projectileDamage);
+                    double damageBlocked = player.getLastDamageBlocked(); // Get amount blocked
+                    
+                    // Show floating text for damage blocked by armor
+                    if (damageBlocked > 0) {
+                        effectsManager.showFloatingText("Blocked: " + String.format("%.0f", damageBlocked), 
+                            playerPos.add(0, -15), Color.LIGHTBLUE); // Display slightly above actual damage
+                    }
+
+                    // Show damage text for actual damage taken
+                    double actualDamageDealtToPlayer = projectileDamage - damageBlocked;
+                    if (actualDamageDealtToPlayer > 0) {
+                        effectsManager.showFloatingText("-" + String.format("%.0f", actualDamageDealtToPlayer), 
+                            playerPos, Color.RED);
+                    }
                     
                     // Remove projectile
                     iterator.remove();
@@ -2735,9 +2828,17 @@ public void openInventory() {
             Stage inventoryStage = new Stage();
             inventoryStage.initModality(Modality.APPLICATION_MODAL);
             inventoryStage.initStyle(StageStyle.UNDECORATED);
+            
+            // Set the owner of the new stage to the main game's stage
+            if (gameCanvas != null && gameCanvas.getScene() != null && gameCanvas.getScene().getWindow() != null) {
+                inventoryStage.initOwner(gameCanvas.getScene().getWindow());
+            } else {
+                System.err.println("Warning: Could not set owner for inventory stage, gameCanvas or its window is null.");
+            }
+            
             inventoryStage.setScene(new Scene(inventoryRoot));
             
-            // Center the window
+            // Center the window (relative to owner if set, otherwise screen)
             inventoryStage.centerOnScreen();
             
             // Show the inventory
@@ -2777,8 +2878,27 @@ public void interactWithPuzzle() {
         
         if (puzzle.isSolved()) {
             System.out.println("Puzzle already solved");
+            // Optionally, show a message that puzzle is already solved
+            effectsManager.showFloatingText("Puzzle already solved!",
+                new Point2D(gameCanvas.getWidth() / 2, gameCanvas.getHeight() / 2 - 50),
+                Color.LIGHTGREEN);
             return;
         }
+
+        // Store only non-movement keys
+        Set<KeyCode> storedActiveKeys = new HashSet<>();
+        for (KeyCode key : activeKeys) {
+            // Only store keys that aren't movement keys
+            if (key != KeyCode.W && key != KeyCode.A && key != KeyCode.S && key != KeyCode.D) {
+                storedActiveKeys.add(key);
+            }
+        }
+        
+        // Clear all keys, including movement keys
+        activeKeys.clear();
+        isPaused = true;
+        gameLoopRunning = false;
+        soundManager.stopSound("running");
         
         // Create puzzle window programmatically
         try {
@@ -2833,10 +2953,35 @@ public void interactWithPuzzle() {
             Stage puzzleStage = new Stage();
             puzzleStage.initModality(Modality.APPLICATION_MODAL);
             puzzleStage.initStyle(StageStyle.UNDECORATED);
+            
+            // Set the owner of the new stage to the main game's stage
+            if (gameCanvas != null && gameCanvas.getScene() != null && gameCanvas.getScene().getWindow() != null) {
+                puzzleStage.initOwner(gameCanvas.getScene().getWindow());
+            } else {
+                System.err.println("Warning: Could not set owner for puzzle stage, gameCanvas or its window is null.");
+            }
+            
             puzzleStage.setScene(scene);
             
             // Center the stage
             puzzleStage.centerOnScreen();
+            
+            // Add listener for when puzzle window is closed
+            puzzleStage.setOnHidden(event -> {
+                // Clear any movement keys that might have been pressed during puzzle
+                activeKeys.remove(KeyCode.W);
+                activeKeys.remove(KeyCode.A);
+                activeKeys.remove(KeyCode.S);
+                activeKeys.remove(KeyCode.D);
+                
+                // Restore only non-movement keys
+                activeKeys.addAll(storedActiveKeys);
+                
+                isPaused = false;
+                gameLoopRunning = true;
+                startGameLoop();
+                gameCanvas.requestFocus();
+            });
             
             // Handle answer submission
             submitButton.setOnAction(e -> {
@@ -2885,7 +3030,7 @@ public void interactWithPuzzle() {
                 if (e.getCode() == KeyCode.ENTER) {
                     submitButton.fire();
                 } else if (e.getCode() == KeyCode.ESCAPE) {
-                    puzzleStage.close();
+                    puzzleStage.close(); // This will trigger the setOnHidden listener
                 }
             });
             
@@ -2921,13 +3066,13 @@ public void interactWithPuzzle() {
         }
         
         if (rewardItem != null) {
-            rewardItem.setX(itemPos.getX());
-            rewardItem.setY(itemPos.getY());
+        rewardItem.setX(itemPos.getX());
+        rewardItem.setY(itemPos.getY());
             rewardItem.setSize(20); // Default item size on ground
-            roomItems.add(rewardItem);
-            
-            // Add visual effect for the reward
-            effectsManager.addExplosionEffect(itemPos, 1.0);
+        roomItems.add(rewardItem);
+        
+        // Add visual effect for the reward
+        effectsManager.addExplosionEffect(itemPos, 1.0);
             System.out.println("Puzzle solved, spawned item: " + rewardItem.getName() + " of type " + rewardItem.getType());
         } else {
             System.out.println("Puzzle solved, but failed to spawn a specific item type.");
@@ -3225,7 +3370,7 @@ public void onPuzzleSolved(DungeonRoom room) {
             Armor.ArmorType[] armorTypes = Armor.ArmorType.values();
             Armor.ArmorType randomType = armorTypes[random.nextInt(armorTypes.length)];
             String name = randomType.toString().charAt(0) + randomType.toString().substring(1).toLowerCase() + " Armor";
-            item = new Armor(name, "Basic " + name.toLowerCase(), 5 + random.nextInt(5), randomType);
+            item = new Armor(name, "Basic " + name.toLowerCase(), randomType);
         }
         
         // Set item position and size
@@ -3518,7 +3663,7 @@ public void onPuzzleSolved(DungeonRoom room) {
         }
     }
 
-    // Add a public method that can be called from other controllers
+ 
     public void returnToMainMenu() {
         System.out.println("returnToMainMenu called in GameController");
         loadMainMenu();
@@ -3527,18 +3672,18 @@ public void onPuzzleSolved(DungeonRoom room) {
     public void addItemToRoom(Item item) {
         if (item != null) {
             roomItems.add(item);
-            // Add visual effect for the dropped item
+           
             effectsManager.showFloatingText("Item dropped!", 
                 new Point2D(item.getX(), item.getY()), 
                 Color.YELLOW);
         }
     }
 
-    // Add these fields to the class
+   
     private Map<Enemy, Double> enemyAttackCooldowns = new HashMap<>();
     private static final double ATTACK_COOLDOWN = 2.0; // 2 seconds cooldown
     private static final double BOUNCE_DISTANCE = 100.0; // Distance to bounce back
-    // Add these fields at the top of the class with other fields
+    
     private Map<Enemy.EnemyType, javafx.scene.image.Image> enemyImages = new HashMap<>();
     private Map<Weapon.WeaponType, javafx.scene.image.Image> weaponImages = new HashMap<>();
     private GraphicsContext gc;

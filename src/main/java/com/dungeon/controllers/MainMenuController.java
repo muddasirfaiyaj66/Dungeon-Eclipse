@@ -6,6 +6,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.event.ActionEvent;
 import javafx.scene.control.Alert;
@@ -36,8 +37,8 @@ public class MainMenuController {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/dungeon/fxml/GameScene.fxml"));
             Parent gameRoot = loader.load();
             
-            // Create a properly sized scene
-            Scene gameScene = new Scene(gameRoot, 1024, 768);
+            // Create a scene that respects existing stage dimensions (fullscreen)
+            Scene gameScene = new Scene(gameRoot);
             
             // Get the current stage from the button
             Stage stage = (Stage) newGameButton.getScene().getWindow();
@@ -52,6 +53,9 @@ public class MainMenuController {
             
             // Set the scene
             stage.setScene(gameScene);
+            
+            // Re-assert full-screen mode after setting the new scene
+            stage.setFullScreen(true);
             
             // Make sure the stage is showing
             if (!stage.isShowing()) {
@@ -111,20 +115,27 @@ public class MainMenuController {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/dungeon/fxml/HighScores.fxml"));
             Parent highScoresRoot = loader.load();
+
+            // Get the HighScoresController and pass a reference to this MainMenuController
+            HighScoresController highScoresController = loader.getController();
+            highScoresController.setMainMenuController(this); // Optional: if HighScoresController needs to call back
+
             Scene highScoresScene = new Scene(highScoresRoot);
             
-            Stage highScoresStage = new Stage();
-            highScoresStage.setTitle("High Scores");
-            highScoresStage.setScene(highScoresScene);
-            highScoresStage.show();
+            // Get current stage from the button that triggered the event
+            Stage stage = (Stage) highScoreButton.getScene().getWindow(); 
+            stage.setScene(highScoresScene);
+            stage.setTitle("High Scores");
+            stage.show();
         } catch (Exception e) {
-            // If the high scores screen doesn't exist yet, show a simple alert
-            Alert alert = new Alert(AlertType.INFORMATION);
-            alert.setTitle("High Scores");
-            alert.setHeaderText("High Scores");
-            alert.setContentText("No scores recorded yet. Play the game to set new records!");
-            alert.showAndWait();
+            System.err.println("Error loading HighScores.fxml: " + e.getMessage());
             e.printStackTrace();
+            // Fallback alert if loading fails
+            Alert alert = new Alert(AlertType.ERROR);
+            alert.setTitle("Error");
+            alert.setHeaderText("Could Not Load High Scores");
+            alert.setContentText("There was an error trying to display the high scores. Please try again later.");
+            alert.showAndWait();
         }
     }
 
@@ -134,20 +145,46 @@ public class MainMenuController {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/dungeon/fxml/Options.fxml"));
             Parent optionsRoot = loader.load();
+
             Scene optionsScene = new Scene(optionsRoot);
             
+            // Apply stylesheet if you have one
+            try {
+                String cssPath = "/com/dungeon/styles/main.css"; 
+                String css = getClass().getResource(cssPath).toExternalForm();
+                if (css != null) {
+                    optionsScene.getStylesheets().add(css);
+                } else {
+                    System.out.println("Options stylesheet not found at: " + cssPath);
+                }
+            } catch (NullPointerException e) {
+                System.out.println("Options stylesheet not found or error constructing path: " + e.getMessage());
+            }
+
+            // Create a new stage for the options window
             Stage optionsStage = new Stage();
             optionsStage.setTitle("Options");
+            optionsStage.initModality(Modality.APPLICATION_MODAL); // Makes it block the main menu
+            
+            // Set the owner of the new stage to the main menu's stage
+            Stage ownerStage = (Stage) optionsButton.getScene().getWindow();
+            optionsStage.initOwner(ownerStage);
+            
             optionsStage.setScene(optionsScene);
-            optionsStage.show();
+            optionsStage.setResizable(false); // Options dialogs are often not resizable
+            
+            System.out.println("Showing options window (modal from MainMenu).");
+            optionsStage.showAndWait(); // Show and wait for it to be closed
+            System.out.println("Options window closed, returning to Main Menu.");
+
         } catch (Exception e) {
-            // If the options screen doesn't exist yet, show a simple alert
-            Alert alert = new Alert(AlertType.INFORMATION);
-            alert.setTitle("Options");
-            alert.setHeaderText("Game Options");
-            alert.setContentText("Options menu is coming soon!");
-            alert.showAndWait();
+            System.err.println("Error loading Options.fxml from MainMenu: " + e.getMessage());
             e.printStackTrace();
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Error");
+            alert.setHeaderText("Could Not Load Options");
+            alert.setContentText("There was an error trying to display the options menu.");
+            alert.showAndWait();
         }
     }
 

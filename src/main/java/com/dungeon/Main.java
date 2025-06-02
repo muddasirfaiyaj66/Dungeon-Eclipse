@@ -8,8 +8,6 @@ import javafx.stage.Stage;
 
 public class Main extends Application {
     private static final String TITLE = "Dungeon Eclipse";
-    private static final int WINDOW_WIDTH = 1024;
-    private static final int WINDOW_HEIGHT = 768;
 
     @Override
     public void start(Stage primaryStage) throws Exception {
@@ -18,8 +16,8 @@ public class Main extends Application {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/dungeon/fxml/MainMenu.fxml"));
             Parent root = loader.load();
             
-            // Create scene with the proper dimensions
-            Scene scene = new Scene(root, WINDOW_WIDTH, WINDOW_HEIGHT);
+            // Create scene without fixed dimensions for fullscreen
+            Scene scene = new Scene(root);
             
             // Add stylesheet if it exists
             try {
@@ -35,9 +33,13 @@ public class Main extends Application {
             // Make the window resizable
             primaryStage.setResizable(true);
             
-            // Set minimum window size
+            // Set to full screen
+            primaryStage.setFullScreen(true);
+            primaryStage.setFullScreenExitHint(""); // Optional: remove exit hint
+            primaryStage.setFullScreenExitKeyCombination(javafx.scene.input.KeyCombination.NO_MATCH); // Prevent ESC from exiting full-screen
+            
+            // Set minimum window size (will apply if user exits fullscreen)
             primaryStage.setMinWidth(800);
-            primaryStage.setMinHeight(600);
             
             // Center the window on screen
             primaryStage.centerOnScreen();

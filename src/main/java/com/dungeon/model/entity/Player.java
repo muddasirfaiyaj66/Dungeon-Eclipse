@@ -56,6 +56,7 @@ public class Player extends Entity {
     private final Inventory inventory;
     private final int maxInventorySize = 20;
     private Weapon currentWeapon;
+    private double lastDamageBlocked; // Field to store the last amount of damage blocked
 
     public Player(double x, double y) {
         super(x, y, DEFAULT_HEALTH, DEFAULT_SPEED, DEFAULT_SIZE);
@@ -102,6 +103,39 @@ this.size = 64;
         // Initialize inventory
         this.inventory = new Inventory(maxInventorySize);
         this.currentWeapon = Weapon.createBasicWeapon();
+    }
+
+    @Override
+    public void takeDamage(double incomingDamage) {
+        System.out.println("[DEBUG] Player.takeDamage called. Incoming: " + incomingDamage + ", Equipped Armor: " + (equippedArmor != null ? equippedArmor.getName() : "None"));
+        this.lastDamageBlocked = 0; // Reset before calculation
+
+        if (!isAlive() || incomingDamage <= 0) return;
+
+        double actualDamageTaken = incomingDamage;
+        
+        if (equippedArmor != null) {
+            double reductionPercentage = equippedArmor.getArmorType().getDamageReductionPercentage();
+            this.lastDamageBlocked = incomingDamage * reductionPercentage;
+            actualDamageTaken = incomingDamage - this.lastDamageBlocked;
+            
+            System.out.println("[DEBUG] Armor Type: " + equippedArmor.getArmorType() + ", Reduction %: " + reductionPercentage);
+            System.out.println("[DEBUG] Damage Reduced by Armor: " + this.lastDamageBlocked);
+            if (this.lastDamageBlocked > 0) {
+                System.out.println("Armor blocked " + String.format("%.1f", this.lastDamageBlocked) + " damage.");
+            }
+        } else {
+            System.out.println("[DEBUG] No armor equipped or equippedArmor is null.");
+        }
+
+        actualDamageTaken = Math.max(0, actualDamageTaken);
+
+        System.out.println("[DEBUG] Calling super.takeDamage with: " + actualDamageTaken + " (Original: " + incomingDamage + ")");
+        super.takeDamage(actualDamageTaken);
+    }
+
+    public double getLastDamageBlocked() {
+        return this.lastDamageBlocked;
     }
 
     public void handleInput(Set<KeyCode> activeKeys, double deltaTime) {
@@ -253,7 +287,7 @@ this.size = 64;
             
             if (equippedArmor != null) {
                 Color armorColor = equippedArmor.getArmorType().getTintColor();
-
+        
                 // Apply tint
                 gc.setFill(armorColor);
                 gc.setGlobalAlpha(0.3); // Keep tint subtle
@@ -268,16 +302,16 @@ this.size = 64;
                 gc.setGlobalAlpha(1.0); // Reset alpha for subsequent drawing
             }
             gc.restore(); // Restore from player body transformations
-        } else {
+    } else {
             // Fallback player rendering (unchanged)
-            gc.setFill(Color.DARKBLUE);
-            gc.fillOval(position.getX(), position.getY(), size, size);
+        gc.setFill(Color.DARKBLUE);
+        gc.fillOval(position.getX(), position.getY(), size, size);
             double cX = position.getX() + size / 2;
             double cY = position.getY() + size / 2;
-            double eyeSize = size / 8;
+        double eyeSize = size / 8;
             double eyeOffsetX = facingDirection.getX() * size / 6;
             double eyeOffsetY = facingDirection.getY() * size / 6;
-            gc.setFill(Color.WHITE);
+        gc.setFill(Color.WHITE);
             gc.fillOval(cX - size/4 + eyeOffsetX/2, cY - size/4 + eyeOffsetY/2, eyeSize, eyeSize);
             gc.fillOval(cX + size/4 + eyeOffsetX/2, cY + size/4 + eyeOffsetY/2, eyeSize, eyeSize); // Corrected Y offset for right eye
         }
@@ -341,16 +375,16 @@ this.size = 64;
         if (item == null) return false;
         // The primary logic for equipping items is now in InventoryController.
         // This method will handle consumables or other direct-use items from player's perspective.
-
+        
         boolean used = false;
-
+        
         switch (item.getType()) {
             case POTION:
                 // Healing potion - heals the player
                 heal(item.getValue());
                 used = true;
                 break;
-
+                
             // WEAPON and ARMOR are handled by InventoryController setting equipped items directly.
             // No specific action needed here for equipping, but we could add stat changes or effects if desired.
             case WEAPON:
@@ -362,7 +396,7 @@ this.size = 64;
                 }
                 // We don't mark 'used = true' here for equipping, as it's not consumed.
                 break;
-
+                
             case ARMOR:
                 if (this.equippedArmor != null && this.equippedArmor.getName().equals(item.getName())) {
                     System.out.println(item.getName() + " is already equipped or handled by InventoryController.");
@@ -379,7 +413,7 @@ this.size = 64;
         if (used && item.isConsumable()) {
             // Ensure the item is actually in the inventory before trying to remove
             if (inventory.hasItem(item.getType())) { 
-                inventory.removeItem(item.getType(), 1);
+            inventory.removeItem(item.getType(), 1);
             }
         }
         
