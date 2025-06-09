@@ -11,7 +11,7 @@ import javafx.stage.Stage;
 import java.io.IOException;
 import java.util.List;
 
-import com.dungeon.data.ScoreManager; 
+import com.dungeon.data.ScoreManager; // We will create this next
 
 public class HighScoresController {
 
@@ -42,45 +42,8 @@ public class HighScoresController {
     }
 
     @FXML
-    private void handleBackButtonAction() {
-        try {
-            System.out.println("Loading main menu from HighScoresController...");
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/dungeon/fxml/MainMenu.fxml"));
-            Parent menuRoot = loader.load();
-            // Use standard scene size consistent with GameController's loadMainMenu
-            Scene menuScene = new Scene(menuRoot, 1024, 768);
-
-            // Apply stylesheet, similar to GameController's loadMainMenu
-            try {
-                String cssPath = "/com/dungeon/styles/main.css";
-                String css = getClass().getResource(cssPath).toExternalForm();
-                menuScene.getStylesheets().add(css);
-                System.out.println("Applied stylesheet to main menu scene: " + cssPath);
-            } catch (Exception e) {
-                System.out.println("Stylesheet not found or error applying: /com/dungeon/styles/main.css - " + e.getMessage());
-            }
-
-            Stage stage = (Stage) backButton.getScene().getWindow();
-            if (stage == null) {
-                System.err.println("Could not find an active stage to show main menu!");
-                return;
-            }
-
-            stage.setScene(menuScene);
-            stage.setTitle("Dungeon Eclipse - Main Menu"); 
-
-            // Configure stage properties to match GameController's loadMainMenu / Main.java
-            stage.setResizable(true);
-            stage.setMinWidth(800);
-            stage.setMinHeight(600);
-            stage.centerOnScreen();
-
-            stage.show();
-            System.out.println("Main menu displayed successfully from HighScoresController.");
-
-        } catch (IOException e) {
-            System.err.println("Error loading MainMenu.fxml from HighScoresController: " + e.getMessage());
-            e.printStackTrace();
-        }
+    private void closeWindow() {
+        Stage stage = (Stage) backButton.getScene().getWindow();
+        stage.close();
     }
 } 

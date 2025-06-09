@@ -12,117 +12,120 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Text?>
 
-<BorderPane styleClass="main-menu-background" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.dungeon.controllers.TutorialController">
+<BorderPane style="-fx-background-color: linear-gradient(to bottom, #1a1a1a, #2b2b2b);" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.dungeon.controllers.TutorialController">
     
     <top>
-        <VBox alignment="CENTER" spacing="10" style="-fx-background-color: pink;">
+        <VBox alignment="CENTER" spacing="10" style="-fx-background-color: rgba(0, 0, 0, 0.3);">
             <padding>
-                <Insets bottom="10" top="20" />
+                <Insets bottom="10" top="15" />
             </padding>
-            <Text fill="#011b048a" styleClass="title-text" text="How to Play">
+            <Text fill="white" style="-fx-font-size: 32px; -fx-font-weight: bold;" text="How to Play">
                 <effect>
-                    <DropShadow radius="5" spread="0.2" />
+                    <DropShadow radius="4" spread="0.2" color="#00000080" />
                 </effect>
             </Text>
         </VBox>
     </top>
     
     <center>
-        <ScrollPane fitToWidth="true" styleClass="tutorial-scroll">
-            <VBox spacing="20" style="-fx-background-color: lavender;" styleClass="tutorial-content">
+        <ScrollPane fitToWidth="true" style="-fx-background: transparent; -fx-background-color: transparent;" prefViewportHeight="500">
+            <VBox spacing="15" style="-fx-background-color: rgba(60, 63, 65, 0.8); -fx-background-radius: 10; -fx-border-radius: 10; -fx-border-color: #4a4a4a; -fx-border-width: 2;">
                 <padding>
-                    <Insets bottom="20" left="30" right="30" top="20" />
+                    <Insets bottom="20" left="25" right="25" top="20" />
                 </padding>
                 
-                <VBox styleClass="tutorial-section">
-                    <Text styleClass="section-title" text="Controls" />
-                    <GridPane hgap="15" vgap="10">
+                <VBox spacing="10" style="-fx-background-color: rgba(0, 0, 0, 0.2); -fx-background-radius: 8; -fx-padding: 10;">
+                    <Text fill="white" style="-fx-font-size: 20px; -fx-font-weight: bold;" text="Controls" />
+                    <GridPane hgap="15" vgap="8">
                         <columnConstraints>
                             <ColumnConstraints hgrow="NEVER" minWidth="100" />
                             <ColumnConstraints hgrow="ALWAYS" />
                         </columnConstraints>
                         
-                        <Text styleClass="key-text" text="W, A, S, D" GridPane.columnIndex="0" GridPane.rowIndex="0" />
-                        <Text text="Move character" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                        <Text fill="white" style="-fx-font-size: 14px; -fx-font-weight: bold;" text="W, A, S, D" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                        <Text fill="white" style="-fx-font-size: 14px;" text="Move character" GridPane.columnIndex="1" GridPane.rowIndex="0" />
                         
-                        <Text styleClass="key-text" text="Mouse" GridPane.columnIndex="0" GridPane.rowIndex="1" />
-                        <Text text="Aim weapons and abilities" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                        <Text fill="white" style="-fx-font-size: 14px; -fx-font-weight: bold;" text="Mouse" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                        <Text fill="white" style="-fx-font-size: 14px;" text="Aim weapons and abilities" GridPane.columnIndex="1" GridPane.rowIndex="1" />
                         
-                        <Text styleClass="key-text" text="Left Click" GridPane.columnIndex="0" GridPane.rowIndex="2" />
-                        <Text text="Attack" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                        <Text fill="white" style="-fx-font-size: 14px; -fx-font-weight: bold;" text="Left Click" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                        <Text fill="white" style="-fx-font-size: 14px;" text="Attack" GridPane.columnIndex="1" GridPane.rowIndex="2" />
                         
-                        <Text styleClass="key-text" text="E" GridPane.columnIndex="0" GridPane.rowIndex="3" />
-                        <Text text="Interact with objects, doors, and puzzles" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+                        <Text fill="white" style="-fx-font-size: 14px; -fx-font-weight: bold;" text="E" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+                        <Text fill="white" style="-fx-font-size: 14px;" text="Interact with objects" GridPane.columnIndex="1" GridPane.rowIndex="3" />
                         
-                        <Text styleClass="key-text" text="I" GridPane.columnIndex="0" GridPane.rowIndex="4" />
-                        <Text text="Open inventory" GridPane.columnIndex="1" GridPane.rowIndex="4" />
+                        <Text fill="white" style="-fx-font-size: 14px; -fx-font-weight: bold;" text="I" GridPane.columnIndex="0" GridPane.rowIndex="4" />
+                        <Text fill="white" style="-fx-font-size: 14px;" text="Open inventory" GridPane.columnIndex="1" GridPane.rowIndex="4" />
                         
-                        <Text styleClass="key-text" text="ESC" GridPane.columnIndex="0" GridPane.rowIndex="5" />
-                        <Text text="Pause game" GridPane.columnIndex="1" GridPane.rowIndex="5" />
+                        <Text fill="white" style="-fx-font-size: 14px; -fx-font-weight: bold;" text="ESC" GridPane.columnIndex="0" GridPane.rowIndex="5" />
+                        <Text fill="white" style="-fx-font-size: 14px;" text="Pause game" GridPane.columnIndex="1" GridPane.rowIndex="5" />
                         
-                        <Text styleClass="key-text" text="1-5" GridPane.columnIndex="0" GridPane.rowIndex="6" />
-                        <Text text="Switch weapons" GridPane.columnIndex="1" GridPane.rowIndex="6" />
-                  <rowConstraints>
-                     <RowConstraints />
-                     <RowConstraints />
-                     <RowConstraints />
-                     <RowConstraints />
-                     <RowConstraints />
-                     <RowConstraints />
-                     <RowConstraints />
-                  </rowConstraints>
+                        <Text fill="white" style="-fx-font-size: 14px; -fx-font-weight: bold;" text="1-5" GridPane.columnIndex="0" GridPane.rowIndex="6" />
+                        <Text fill="white" style="-fx-font-size: 14px;" text="Switch weapons" GridPane.columnIndex="1" GridPane.rowIndex="6" />
+                        
+                        <rowConstraints>
+                            <RowConstraints />
+                            <RowConstraints />
+                            <RowConstraints />
+                            <RowConstraints />
+                            <RowConstraints />
+                            <RowConstraints />
+                            <RowConstraints />
+                        </rowConstraints>
                     </GridPane>
                 </VBox>
                 
-                <VBox styleClass="tutorial-section">
-                    <Text styleClass="section-title" text="Game Mechanics" />
-                    <Text text="◆ Each playthrough features a unique procedurally generated dungeon." wrappingWidth="700" />
-                    <Text text="◆ Explore rooms, battle enemies, and collect treasures." wrappingWidth="700" />
-                    <Text text="◆ Solve puzzles to unlock paths and discover secrets." wrappingWidth="700" />
-                    <Text text="◆ Defeat the boss at the end of each level to progress." wrappingWidth="700" />
-                    <Text text="◆ Manage your inventory and use items wisely." wrappingWidth="700" />
+                <VBox spacing="10" style="-fx-background-color: rgba(0, 0, 0, 0.2); -fx-background-radius: 8; -fx-padding: 10;">
+                    <Text fill="white" style="-fx-font-size: 20px; -fx-font-weight: bold;" text="Game Mechanics" />
+                    <Text fill="white" style="-fx-font-size: 14px;" text="◆ Each playthrough features a unique procedurally generated dungeon." wrappingWidth="600" />
+                    <Text fill="white" style="-fx-font-size: 14px;" text="◆ Explore rooms, battle enemies, and collect treasures." wrappingWidth="600" />
+                    <Text fill="white" style="-fx-font-size: 14px;" text="◆ Solve puzzles to unlock paths and discover secrets." wrappingWidth="600" />
+                    <Text fill="white" style="-fx-font-size: 14px;" text="◆ Defeat the boss at the end of each level to progress." wrappingWidth="600" />
+                    <Text fill="white" style="-fx-font-size: 14px;" text="◆ Manage your inventory and use items wisely." wrappingWidth="600" />
                 </VBox>
                 
-                <VBox styleClass="tutorial-section">
-                    <Text styleClass="section-title" text="Room Types" />
-                    <HBox spacing="20">
-                        <VBox alignment="TOP_CENTER" styleClass="room-type">
-                            <Text styleClass="room-type-title" text="Combat Rooms" />
-                            <Text text="Defeat all enemies to progress" textAlignment="CENTER" wrappingWidth="150" />
+                <VBox spacing="10" style="-fx-background-color: rgba(0, 0, 0, 0.2); -fx-background-radius: 8; -fx-padding: 10;">
+                    <Text fill="white" style="-fx-font-size: 20px; -fx-font-weight: bold;" text="Room Types" />
+                    <HBox spacing="15" alignment="CENTER">
+                        <VBox alignment="TOP_CENTER" spacing="5" style="-fx-background-color: rgba(0, 0, 0, 0.3); -fx-background-radius: 8; -fx-padding: 10;">
+                            <Text fill="white" style="-fx-font-size: 16px; -fx-font-weight: bold;" text="Combat" />
+                            <Text fill="white" style="-fx-font-size: 12px;" text="Defeat all enemies" textAlignment="CENTER" wrappingWidth="100" />
                         </VBox>
-                        <VBox alignment="TOP_CENTER" styleClass="room-type">
-                            <Text styleClass="room-type-title" text="Puzzle Rooms" />
-                            <Text text="Solve the puzzle to unlock doors" textAlignment="CENTER" wrappingWidth="150" />
+                        <VBox alignment="TOP_CENTER" spacing="5" style="-fx-background-color: rgba(0, 0, 0, 0.3); -fx-background-radius: 8; -fx-padding: 10;">
+                            <Text fill="white" style="-fx-font-size: 16px; -fx-font-weight: bold;" text="Puzzle" />
+                            <Text fill="white" style="-fx-font-size: 12px;" text="Solve puzzles" textAlignment="CENTER" wrappingWidth="100" />
                         </VBox>
-                        <VBox alignment="TOP_CENTER" styleClass="room-type">
-                            <Text styleClass="room-type-title" text="Treasure Rooms" />
-                            <Text text="Collect valuable items and power-ups" textAlignment="CENTER" wrappingWidth="150" />
+                        <VBox alignment="TOP_CENTER" spacing="5" style="-fx-background-color: rgba(0, 0, 0, 0.3); -fx-background-radius: 8; -fx-padding: 10;">
+                            <Text fill="white" style="-fx-font-size: 16px; -fx-font-weight: bold;" text="Treasure" />
+                            <Text fill="white" style="-fx-font-size: 12px;" text="Collect items" textAlignment="CENTER" wrappingWidth="100" />
                         </VBox>
-                        <VBox alignment="TOP_CENTER" styleClass="room-type">
-                            <Text styleClass="room-type-title" text="Boss Rooms" />
-                            <Text text="Defeat the powerful boss to complete the level" textAlignment="CENTER" wrappingWidth="150" />
+                        <VBox alignment="TOP_CENTER" spacing="5" style="-fx-background-color: rgba(0, 0, 0, 0.3); -fx-background-radius: 8; -fx-padding: 10;">
+                            <Text fill="white" style="-fx-font-size: 16px; -fx-font-weight: bold;" text="Boss" />
+                            <Text fill="white" style="-fx-font-size: 12px;" text="Defeat boss" textAlignment="CENTER" wrappingWidth="100" />
                         </VBox>
                     </HBox>
                 </VBox>
                 
-                <VBox styleClass="tutorial-section">
-                    <Text styleClass="section-title" text="Tips" />
-                    <Text text="◆ Look for health potions to restore your health." wrappingWidth="700" />
-                    <Text text="◆ Keys are required to unlock certain doors." wrappingWidth="700" />
-                    <Text text="◆ Some enemies have special abilities - observe their attack patterns." wrappingWidth="700" />
-                    <Text text="◆ Bosses have multiple phases and weak spots to exploit." wrappingWidth="700" />
-                    <Text text="◆ Collect gold to increase your score." wrappingWidth="700" />
+                <VBox spacing="10" style="-fx-background-color: rgba(0, 0, 0, 0.2); -fx-background-radius: 8; -fx-padding: 10;">
+                    <Text fill="white" style="-fx-font-size: 20px; -fx-font-weight: bold;" text="Tips" />
+                    <Text fill="white" style="-fx-font-size: 14px;" text="◆ Look for health potions to restore your health." wrappingWidth="600" />
+                    <Text fill="white" style="-fx-font-size: 14px;" text="◆ Keys are required to unlock certain doors." wrappingWidth="600" />
+                    <Text fill="white" style="-fx-font-size: 14px;" text="◆ Some enemies have special abilities - observe their attack patterns." wrappingWidth="600" />
+                    <Text fill="white" style="-fx-font-size: 14px;" text="◆ Bosses have multiple phases and weak spots to exploit." wrappingWidth="600" />
+                    <Text fill="white" style="-fx-font-size: 14px;" text="◆ Collect gold to increase your score." wrappingWidth="600" />
                 </VBox>
             </VBox>
         </ScrollPane>
     </center>
     
     <bottom>
-        <HBox alignment="CENTER" spacing="20" style="-fx-background-color: black;">
+        <HBox alignment="CENTER" spacing="20" style="-fx-background-color: rgba(0, 0, 0, 0.3);">
             <padding>
-                <Insets bottom="20" left="20" right="20" top="10" />
+                <Insets bottom="15" left="20" right="20" top="10" />
             </padding>
-            <Button fx:id="closeButton" onAction="#closeWindow" style="-fx-background-color: crimson;" styleClass="menu-button" text="Close" />
+            <Button fx:id="closeButton" onAction="#closeWindow" 
+                    style="-fx-background-color: linear-gradient(to bottom, #4a4a4a, #3a3a3a); -fx-text-fill: white; -fx-font-size: 16px; -fx-background-radius: 5; -fx-padding: 8 25; -fx-cursor: hand;" 
+                    text="Close" />
         </HBox>
     </bottom>
 </BorderPane>

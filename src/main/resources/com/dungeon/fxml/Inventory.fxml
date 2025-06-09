@@ -4,26 +4,35 @@
 <?import javafx.scene.control.*?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.text.Text?>
+<?import javafx.scene.effect.DropShadow?>
 
 <VBox xmlns="http://javafx.com/javafx"
       xmlns:fx="http://javafx.com/fxml"
       fx:controller="com.dungeon.controllers.InventoryController"
-      styleClass="inventory-panel"
-      spacing="10"
-      maxWidth="300"
-      maxHeight="400">
+      style="-fx-background-color: linear-gradient(to bottom, #1a1a1a, #2b2b2b); -fx-background-radius: 10; -fx-border-radius: 10; -fx-border-color: #4a4a4a; -fx-border-width: 2;"
+      spacing="15"
+      maxWidth="400"
+      maxHeight="500">
     
     <padding>
-        <Insets top="10" right="10" bottom="10" left="10"/>
+        <Insets top="20" right="20" bottom="20" left="20"/>
     </padding>
 
-    <Text text="Inventory" styleClass="inventory-title"/>
+    <Text text="Inventory" fill="white" style="-fx-font-size: 28px; -fx-font-weight: bold;">
+        <effect>
+            <DropShadow radius="4" spread="0.2" color="#00000080"/>
+        </effect>
+    </Text>
     
-    <ListView fx:id="itemListView" VBox.vgrow="ALWAYS"/>
+    <ListView fx:id="itemListView" VBox.vgrow="ALWAYS" 
+              style="-fx-background-color: rgba(60, 63, 65, 0.8); -fx-background-radius: 5; -fx-border-radius: 5; -fx-border-color: #4a4a4a; -fx-border-width: 1; -fx-text-fill: white; -fx-font-size: 16px;"/>
     
-    <HBox spacing="10" alignment="CENTER">
-        <Button text="Use" onAction="#useItem" fx:id="useButton"/>
-        <Button text="Drop" onAction="#dropItem" fx:id="dropButton"/>
-        <Button text="Close" onAction="#closeInventory" fx:id="closeButton"/>
+    <HBox spacing="15" alignment="CENTER">
+        <Button text="Use" onAction="#useItem" fx:id="useButton" 
+                style="-fx-background-color: linear-gradient(to bottom, #4a4a4a, #3a3a3a); -fx-text-fill: white; -fx-font-size: 16px; -fx-background-radius: 5; -fx-padding: 8 20; -fx-cursor: hand;"/>
+        <Button text="Drop" onAction="#dropItem" fx:id="dropButton"
+                style="-fx-background-color: linear-gradient(to bottom, #4a4a4a, #3a3a3a); -fx-text-fill: white; -fx-font-size: 16px; -fx-background-radius: 5; -fx-padding: 8 20; -fx-cursor: hand;"/>
+        <Button text="Close" onAction="#closeInventory" fx:id="closeButton"
+                style="-fx-background-color: linear-gradient(to bottom, #4a4a4a, #3a3a3a); -fx-text-fill: white; -fx-font-size: 16px; -fx-background-radius: 5; -fx-padding: 8 20; -fx-cursor: hand;"/>
     </HBox>
 </VBox>

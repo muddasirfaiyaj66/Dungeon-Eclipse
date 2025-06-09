@@ -4,7 +4,12 @@ import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.image.Image;
 import javafx.stage.Stage;
+import com.dungeon.utils.UIUtils;
+import javafx.animation.FadeTransition;
+import javafx.application.Platform;
+import javafx.util.Duration;
 
 public class Main extends Application {
     private static final String TITLE = "Dungeon Eclipse";
@@ -12,9 +17,16 @@ public class Main extends Application {
     @Override
     public void start(Stage primaryStage) throws Exception {
         try {
-            // Load the main menu FXML
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/dungeon/fxml/MainMenu.fxml"));
+            // Set application icon using the utility method
+            UIUtils.setStageIcon(primaryStage);
+
+            // Set window title
+            primaryStage.setTitle(TITLE);
+
+            // Load the splash screen FXML first
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/dungeon/fxml/SplashScreen.fxml"));
             Parent root = loader.load();
+            root.setOpacity(0.0); // Start with content invisible
             
             // Create scene without fixed dimensions for fullscreen
             Scene scene = new Scene(root);
@@ -27,7 +39,6 @@ public class Main extends Application {
             }
             
             // Configure the window
-            primaryStage.setTitle(TITLE);
             primaryStage.setScene(scene);
             
             // Make the window resizable
@@ -46,6 +57,17 @@ public class Main extends Application {
             
             // Show the window
             primaryStage.show();
+            
+            // Prevent the window from being closed by OS controls (e.g., Alt+F4, 'X' button)
+            primaryStage.setOnCloseRequest(event -> {
+                event.consume(); 
+            });
+            
+            // Fade in the content to avoid initial flicker
+            FadeTransition fadeIn = new FadeTransition(Duration.seconds(1), root);
+            fadeIn.setFromValue(0.0);
+            fadeIn.setToValue(1.0);
+            fadeIn.play();
             
             System.out.println("Main window initialized successfully");
         } catch (Exception e) {

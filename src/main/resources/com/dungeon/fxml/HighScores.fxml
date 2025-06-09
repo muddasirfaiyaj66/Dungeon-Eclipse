@@ -6,16 +6,26 @@
 <?import javafx.scene.control.ListView?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
+<?import javafx.scene.effect.DropShadow?>
 
-<VBox alignment="CENTER" spacing="20.0" style="-fx-background-color: #2b2b2b; -fx-padding: 20;" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.dungeon.controllers.HighScoresController">
+<VBox alignment="CENTER" spacing="20.0" style="-fx-background-color: linear-gradient(to bottom, #1a1a1a, #2b2b2b); -fx-padding: 30;" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.dungeon.controllers.HighScoresController">
     <children>
         <Label text="High Scores" textFill="white">
             <font>
-                <Font name="Arial Bold" size="36.0" />
+                <Font name="System Bold" size="42.0" />
             </font>
+            <effect>
+                <DropShadow radius="4" spread="0.2" color="#00000080"/>
+            </effect>
         </Label>
-        <ListView fx:id="highScoresListView" prefHeight="300.0" prefWidth="300.0" style="-fx-background-color: #3c3f41; -fx-text-fill: white;"/>
-        <Button fx:id="backButton" mnemonicParsing="false" onAction="#handleBackButtonAction" style="-fx-background-color: #555555; -fx-text-fill: white; -fx-font-size: 18px;" text="Back to Main Menu">
+        <ListView fx:id="highScoresListView" prefHeight="400.0" prefWidth="400.0" 
+                 style="-fx-background-color: rgba(60, 63, 65, 0.8); -fx-background-radius: 10; -fx-border-radius: 10; -fx-border-color: #4a4a4a; -fx-border-width: 2; -fx-text-fill: white; -fx-font-size: 16px;"/>
+        <Button fx:id="backButton" mnemonicParsing="false" onAction="#closeWindow" 
+                style="-fx-background-color: linear-gradient(to bottom, #4a4a4a, #3a3a3a); -fx-text-fill: white; -fx-font-size: 18px; -fx-background-radius: 5; -fx-padding: 10 20; -fx-cursor: hand;" 
+                text="Close">
+            <effect>
+                <DropShadow radius="3" spread="0.1" color="#00000040"/>
+            </effect>
             <VBox.margin>
                 <Insets top="20.0" />
             </VBox.margin>

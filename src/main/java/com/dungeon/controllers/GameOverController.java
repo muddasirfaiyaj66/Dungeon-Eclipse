@@ -7,9 +7,15 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.DialogPane;
+import javafx.scene.control.Label;
 import javafx.scene.control.TextInputDialog;
+import javafx.scene.control.TextField;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
+import javafx.animation.FadeTransition;
+import javafx.util.Duration;
+import javafx.scene.paint.Color;
 
 import java.util.Optional;
 
@@ -46,13 +52,62 @@ public class GameOverController {
         levelText.setText("Levels Completed: " + levelsCompleted);
         enemiesText.setText("Enemies Defeated: " + enemiesDefeated);
 
-        // Prompt for player name and save score
-        // Run on JavaFX application thread to ensure UI operations are safe
         Platform.runLater(() -> {
             TextInputDialog dialog = new TextInputDialog("Player");
             dialog.setTitle("Game Over");
             dialog.setHeaderText("You scored: " + score + "! Enter your name for the high scores:");
             dialog.setContentText("Name:");
+
+          
+            DialogPane dialogPane = dialog.getDialogPane();
+            dialogPane.getStyleClass().add("custom-dialog");
+            dialogPane.setStyle("-fx-background-color: linear-gradient(to bottom, #1a1a1a, #2b2b2b);" +
+                              "-fx-border-color: #4a4a4a;" +
+                              "-fx-border-width: 2;" +
+                              "-fx-border-radius: 10;" +
+                              "-fx-background-radius: 10;");
+
+            // Style the header and content labels
+            Label headerLabel = (Label) dialogPane.lookup(".header-panel .label");
+            if (headerLabel != null) {
+                headerLabel.setStyle("-fx-text-fill: white;" +
+                                   "-fx-font-size: 16px;" +
+                                   "-fx-font-weight: bold;");
+            }
+
+            Label contentLabel = (Label) dialogPane.lookup(".content .label");
+            if (contentLabel != null) {
+                contentLabel.setStyle("-fx-text-fill: white;" +
+                                    "-fx-font-size: 14px;");
+            }
+
+            // Style the text field
+            TextField textField = dialog.getEditor();
+            textField.setStyle("-fx-background-color: rgba(60, 63, 65, 0.8);" +
+                             "-fx-text-fill: white;" +
+                             "-fx-font-size: 14px;" +
+                             "-fx-padding: 8;" +
+                             "-fx-background-radius: 5;" +
+                             "-fx-border-radius: 5;" +
+                             "-fx-border-color: #4a4a4a;" +
+                             "-fx-border-width: 1;");
+
+            // Style the buttons
+            dialogPane.lookupAll(".button").forEach(node -> {
+                if (node instanceof Button) {
+                    Button button = (Button) node;
+                    button.setStyle("-fx-background-color: linear-gradient(to bottom, #4a4a4a, #3a3a3a);" +
+                                  "-fx-text-fill: white;" +
+                                  "-fx-font-size: 14px;" +
+                                  "-fx-padding: 8 20;" +
+                                  "-fx-background-radius: 5;" +
+                                  "-fx-cursor: hand;");
+                }
+            });
+
+            // Set the owner of the dialog to the main game window to make it modal
+            Stage owner = (Stage) scoreText.getScene().getWindow();
+            dialog.initOwner(owner);
 
             Optional<String> result = dialog.showAndWait();
             result.ifPresent(name -> {
@@ -70,121 +125,82 @@ public class GameOverController {
     }
     
     @FXML
-    @SuppressWarnings("unused")
-    private void restartGame() {
+    private void returnToMainMenu() {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/dungeon/fxml/GameScene.fxml"));
-            Parent gameRoot = loader.load();
-            // Create scene without fixed dimensions for fullscreen
-            Scene gameScene = new Scene(gameRoot);
-            
-            Stage stage = (Stage) tryAgainButton.getScene().getWindow();
-            
-            // Configure stage properties
-            stage.setResizable(true);
-            stage.setMinWidth(800);
-            stage.setMinHeight(600);
-            
-            stage.setScene(gameScene);
-            // Re-assert full-screen mode after setting the new scene
-            stage.setFullScreen(true);
-            
-            // Make sure the stage is showing
-            if (!stage.isShowing()) {
-                stage.show();
-            }
-            
-            GameController newGameController = loader.getController(); // Renamed to avoid confusion
-            Platform.runLater(() -> {
-                System.out.println("Initializing game controller from game over screen...");
-                newGameController.onSceneReady();
-                
-                // Force focus on the game canvas
-                gameScene.getRoot().requestFocus();
+            // Get the current scene and its root pane
+            Scene currentScene = mainMenuButton.getScene();
+            Parent currentRoot = currentScene.getRoot();
+
+            // 1. Fade out the current screen
+            FadeTransition fadeOut = new FadeTransition(Duration.seconds(0.5), currentRoot);
+            fadeOut.setFromValue(1.0);
+            fadeOut.setToValue(0.0);
+            fadeOut.setOnFinished(event -> {
+                try {
+                    // 2. Load the main menu content
+                    FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/dungeon/fxml/MainMenu.fxml"));
+                    Parent mainMenuRoot = loader.load();
+                    mainMenuRoot.setOpacity(0.0); // Start transparent for fade-in
+
+                    // 3. Replace the scene's root with the new main menu content
+                    currentScene.setRoot(mainMenuRoot);
+                    
+                    // 4. Fade in the new main menu
+                    FadeTransition fadeIn = new FadeTransition(Duration.seconds(0.5), mainMenuRoot);
+                    fadeIn.setFromValue(0.0);
+                    fadeIn.setToValue(1.0);
+                    fadeIn.play();
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             });
+            fadeOut.play();
+            
         } catch (Exception e) {
-            System.err.println("Error restarting game: " + e.getMessage());
             e.printStackTrace();
         }
     }
     
     @FXML
-    @SuppressWarnings("unused")
-    private void returnToMainMenu() {
-        System.out.println("returnToMainMenu called in GameOverController");
-        System.out.println("gameController reference exists: " + (this.gameController != null));
-        
-        boolean success = false;
-        
-        // First try using the gameController reference
-        if (this.gameController != null) {
-            try {
-                System.out.println("Calling gameController.returnToMainMenu()");
-                this.gameController.returnToMainMenu();
-                success = true;
-            } catch (Exception e) {
-                System.err.println("Error using gameController to return to main menu: " + e.getMessage());
-                e.printStackTrace();
-            }
-        }
-        
-        // If the first approach failed, try the direct method
-        if (!success) {
-            System.out.println("Using direct method to return to main menu");
-            // Fallback to original implementation
-            try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/dungeon/fxml/MainMenu.fxml"));
-                Parent menuRoot = loader.load();
-                Scene menuScene = new Scene(menuRoot, 1024, 768);
-                
-                // Add stylesheet
+    private void restartGame() {
+        try {
+            Scene currentScene = tryAgainButton.getScene();
+            
+            // Fade out, replace root, then fade in
+            Parent currentRoot = currentScene.getRoot();
+            FadeTransition fadeOut = new FadeTransition(Duration.seconds(0.5), currentRoot);
+            fadeOut.setFromValue(1.0);
+            fadeOut.setToValue(0.0);
+            fadeOut.setOnFinished(event -> {
                 try {
-                    menuScene.getStylesheets().add(getClass().getResource("/com/dungeon/styles/main.css").toExternalForm());
+                    FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/dungeon/fxml/GameScene.fxml"));
+                    Parent gameRoot = loader.load();
+                    gameRoot.setStyle("-fx-background-color: rgb(70, 86, 105);"); // Prevent flash
+                    gameRoot.setOpacity(0.0);
+                    currentScene.setRoot(gameRoot);
+                    
+                    FadeTransition fadeIn = new FadeTransition(Duration.seconds(0.5), gameRoot);
+                    fadeIn.setFromValue(0.0);
+                    fadeIn.setToValue(1.0);
+                    fadeIn.setOnFinished(e -> {
+                         GameController newGameController = loader.getController();
+                         Platform.runLater(newGameController::onSceneReady);
+                    });
+                    fadeIn.play();
+
                 } catch (Exception e) {
-                    System.out.println("Stylesheet not found: " + e.getMessage());
+                    e.printStackTrace();
                 }
-                
-                // Get the current stage
-                Stage stage = null;
-                
-                if (mainMenuButton != null && mainMenuButton.getScene() != null && 
-                    mainMenuButton.getScene().getWindow() != null) {
-                    stage = (Stage) mainMenuButton.getScene().getWindow();
-                    System.out.println("Got stage from mainMenuButton");
-                } else {
-                    // Try to find any active stage
-                    for (javafx.stage.Window window : javafx.stage.Window.getWindows()) {
-                        if (window instanceof Stage && window.isShowing()) {
-                            stage = (Stage) window;
-                            System.out.println("Found active stage: " + stage.getTitle());
-                            break;
-                        }
-                    }
-                }
-                
-                if (stage == null) {
-                    System.err.println("Could not find an active stage to show main menu!");
-                    return;
-                }
-                
-                // Configure stage properties to match Main.java
-                stage.setResizable(true);
-                stage.setMinWidth(800);
-                stage.setMinHeight(600);
-                stage.centerOnScreen();
-                
-                stage.setScene(menuScene);
-                stage.show();
-                System.out.println("Main menu displayed via direct method");
-            } catch (Exception e) {
-                System.err.println("Error returning to main menu: " + e.getMessage());
-                e.printStackTrace();
-            }
+            });
+            fadeOut.play();
+
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
     
     @FXML
-    @SuppressWarnings("unused")
     private void quitGame() {
         Platform.exit();
     }

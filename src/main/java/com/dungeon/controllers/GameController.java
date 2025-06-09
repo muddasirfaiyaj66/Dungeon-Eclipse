@@ -27,6 +27,7 @@ import com.dungeon.model.entity.ProjectileAttack;
 import com.dungeon.model.entity.EnemyAbility;
 import com.dungeon.view.DungeonRenderer;
 import com.dungeon.view.LightingEffect;
+import com.dungeon.utils.UIUtils; // Import the utility class
 
 import javafx.animation.AnimationTimer;
 import javafx.application.Platform;
@@ -53,6 +54,7 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.util.Duration;
+import javafx.animation.FadeTransition;
 
 public class GameController {
     // Enum for door directions
@@ -213,23 +215,7 @@ public class GameController {
         // Add components to menu
         pauseMenu.getChildren().addAll(title, resumeButton, optionsButton, exitButton);
         
-        // Center the pause menu in the canvasContainer instead of rootPane
-        // This ensures it stays within the game area
-        // pauseMenu.setLayoutX((canvasContainer.getWidth() - pauseMenu.getPrefWidth()) / 2);
-        // pauseMenu.setLayoutY((canvasContainer.getHeight() - pauseMenu.getPrefHeight()) / 2);
         
-        // Add positioning listeners to keep menu centered when window is resized
-        // canvasContainer.widthProperty().addListener((obs, oldVal, newVal) -> {
-        //     if (pauseMenu != null) {
-        //         pauseMenu.setLayoutX((newVal.doubleValue() - pauseMenu.getWidth()) / 2);
-        //     }
-        // });
-        
-        // canvasContainer.heightProperty().addListener((obs, oldVal, newVal) -> {
-        //     if (pauseMenu != null) {
-        //         pauseMenu.setLayoutY((newVal.doubleValue() - pauseMenu.getHeight()) / 2);
-        //     }
-        // });
         
         // Initially hide the pause menu
         pauseMenu.setVisible(false);
@@ -245,13 +231,7 @@ public class GameController {
         isPaused = !isPaused;
         
         if (isPaused) {
-            // Update position to ensure it's centered correctly
-            // double menuWidth = pauseMenu.prefWidth(-1); 
-            // double menuHeight = pauseMenu.prefHeight(-1);
             
-            // Center in canvas container
-            // pauseMenu.setLayoutX((canvasContainer.getWidth() - menuWidth) / 2);
-            // pauseMenu.setLayoutY((canvasContainer.getHeight() - menuHeight) / 2);
             
             pauseMenu.setVisible(true);
             pauseMenu.toFront(); // Ensure it's on top
@@ -305,6 +285,7 @@ public class GameController {
             }
 
             Stage optionsStage = new Stage();
+            UIUtils.setStageIcon(optionsStage); // Set the icon here
             optionsStage.setTitle("Sound Options");
             optionsStage.initModality(Modality.APPLICATION_MODAL); // Block interaction with game window
             
@@ -340,74 +321,47 @@ public class GameController {
     }
     
     private void exitToMainMenu() {
+        System.out.println("Exiting to main menu...");
+        soundManager.stopBackgroundMusic();
         loadMainMenu();
     }
 
     private void loadMainMenu() {
         try {
-            System.out.println("Loading main menu...");
-            // Load the main menu
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/dungeon/fxml/MainMenu.fxml"));
-            Parent menuRoot = loader.load();
-            Scene menuScene = new Scene(menuRoot, 1024, 768);
-            
-            // Configure styling for the scene - match Main.java implementation
-            try {
-                System.out.println("Adding stylesheet to main menu");
-                menuScene.getStylesheets().add(getClass().getResource("/com/dungeon/styles/main.css").toExternalForm());
-            } catch (Exception e) {
-                System.out.println("Stylesheet not found: " + e.getMessage());
-            }
-            
-            // Close any active audio resources
-            if (soundManager != null) {
-                soundManager.stopBackgroundMusic();
-                soundManager.stopAllSounds();
-            }
-            
-            // Get the current stage - we need to be careful because gameCanvas might be null
-            Stage stage = null;
-            
-            // Try to get the stage from gameCanvas first
-            if (gameCanvas != null && gameCanvas.getScene() != null && gameCanvas.getScene().getWindow() != null) {
-                stage = (Stage) gameCanvas.getScene().getWindow();
-                System.out.println("Got stage from gameCanvas");
-            } 
-            // If we can't get it from gameCanvas, try to get it from rootPane
-            else if (rootPane != null && rootPane.getScene() != null && rootPane.getScene().getWindow() != null) {
-                stage = (Stage) rootPane.getScene().getWindow();
-                System.out.println("Got stage from rootPane");
-            }
-           
-            else {
-                System.out.println("Could not get stage from standard components, looking for active stages");
-                
-                for (javafx.stage.Window window : javafx.stage.Window.getWindows()) {
-                    if (window instanceof Stage && window.isShowing()) {
-                        stage = (Stage) window;
-                        System.out.println("Found active stage: " + stage.getTitle());
-                        break;
-                    }
+            isPaused = false;
+            gameLoopRunning = false;
+
+            // Get the current scene and its root pane
+            Scene currentScene = gameCanvas.getScene();
+            Parent gameRoot = currentScene.getRoot();
+
+            // 1. Fade out the game screen
+            FadeTransition fadeOut = new FadeTransition(Duration.seconds(0.5), gameRoot);
+            fadeOut.setFromValue(1.0);
+            fadeOut.setToValue(0.0);
+            fadeOut.setOnFinished(event -> {
+                try {
+                    // 2. Load the main menu content
+                    FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/dungeon/fxml/MainMenu.fxml"));
+                    Parent mainMenuRoot = loader.load();
+                    mainMenuRoot.setOpacity(0.0); // Start transparent for fade-in
+
+                    // 3. Replace the scene's root with the new main menu content
+                    currentScene.setRoot(mainMenuRoot);
+                    
+                    // 4. Fade in the new main menu
+                    FadeTransition fadeIn = new FadeTransition(Duration.seconds(0.5), mainMenuRoot);
+                    fadeIn.setFromValue(0.0);
+                    fadeIn.setToValue(1.0);
+                    fadeIn.play();
+
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
-            }
+            });
+            fadeOut.play();
             
-            if (stage == null) {
-                System.err.println("Could not find an active stage to show main menu!");
-                return;
-            }
-            
-            stage.setScene(menuScene);
-            
-            // Configure stage properties to match Main.java
-            stage.setResizable(true);
-            stage.setMinWidth(800);
-            stage.setMinHeight(600);
-            stage.centerOnScreen();
-            
-            stage.show();
-            System.out.println("Main menu displayed successfully");
         } catch (Exception e) {
-            System.err.println("Error loading main menu: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -1566,6 +1520,7 @@ public class GameController {
                 Door bossDoor = new Door(doorX, doorY, doorWidth, doorHeight, currentRoom, bossRoom, Door.DoorDirection.EAST);
                 bossDoor.setLocked(false);
                 doors.add(bossDoor);
+                effectsManager.showFloatingText("Return to spawn room!", new Point2D(doorX + doorWidth/2, doorY - 20), Color.YELLOW);
                 System.out.println("Created boss door in spawn room");
                 return;
             }
@@ -2826,6 +2781,8 @@ public void openInventory() {
             
             // Create the inventory window
             Stage inventoryStage = new Stage();
+            UIUtils.setStageIcon(inventoryStage); // Set the icon here
+            inventoryStage.setTitle("Inventory");
             inventoryStage.initModality(Modality.APPLICATION_MODAL);
             inventoryStage.initStyle(StageStyle.UNDECORATED);
             
@@ -2951,6 +2908,8 @@ public void interactWithPuzzle() {
             
             // Create the stage
             Stage puzzleStage = new Stage();
+            UIUtils.setStageIcon(puzzleStage); // Set the icon here
+            puzzleStage.setTitle("Puzzle Room");
             puzzleStage.initModality(Modality.APPLICATION_MODAL);
             puzzleStage.initStyle(StageStyle.UNDECORATED);
             
@@ -3082,28 +3041,43 @@ public void interactWithPuzzle() {
     private void showGameOverScreen() {
         try {
             System.out.println("Showing game over screen...");
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/dungeon/fxml/GameOver.fxml"));
-            Parent gameOverRoot = loader.load();
-            Scene gameOverScene = new Scene(gameOverRoot);
-            
-            GameOverController controller = loader.getController();
-            controller.setGameStats((int)player.getScore(), currentLevel - 1, enemiesDefeated);
-            
-            // Set the reference to this controller so it can properly return to main menu
-            System.out.println("Setting game controller reference in GameOverController");
-            controller.setGameController(this);
-            
-            // Stop the game loop
             gameLoopRunning = false;
-            soundManager.stopSound("running"); // Stop running sound if still playing
+            soundManager.stopSound("running");
+
+            // Get the current scene and its root pane
+            Scene currentScene = gameCanvas.getScene();
+            Parent gameRoot = currentScene.getRoot();
+
+            // 1. Fade out the game screen
+            FadeTransition fadeOut = new FadeTransition(Duration.seconds(0.5), gameRoot);
+            fadeOut.setFromValue(1.0);
+            fadeOut.setToValue(0.0);
+            fadeOut.setOnFinished(event -> {
+                try {
+                    // 2. Load the game over screen content
+                    FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/dungeon/fxml/GameOver.fxml"));
+                    Parent gameOverRoot = loader.load();
+                    gameOverRoot.setOpacity(0.0);
+
+                    GameOverController controller = loader.getController();
+                    controller.setGameStats((int)player.getScore(), currentLevel - 1, enemiesDefeated);
+                    controller.setGameController(this);
+
+                    // 3. Replace the scene's root
+                    currentScene.setRoot(gameOverRoot);
+
+                    // 4. Fade in the game over screen
+                    FadeTransition fadeIn = new FadeTransition(Duration.seconds(0.5), gameOverRoot);
+                    fadeIn.setFromValue(0.0);
+                    fadeIn.setToValue(1.0);
+                    fadeIn.play();
+
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
+            fadeOut.play();
             
-            // Transition to game over screen
-            Stage stage = (Stage) gameCanvas.getScene().getWindow();
-            stage.setScene(gameOverScene);
-            
-            stage.show();
-            
-            System.out.println("Game over screen displayed");
         } catch (Exception e) {
             System.err.println("Error showing game over screen: " + e.getMessage());
             e.printStackTrace();
@@ -3121,32 +3095,47 @@ public void interactWithPuzzle() {
 
     private void showVictoryScreen() {
         try {
-            // Stop all sounds before showing victory screen
             soundManager.stopSound("running");
             soundManager.stopBackgroundMusic();
-            
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/dungeon/fxml/Victory.fxml"));
-            Parent victoryRoot = loader.load();
-            Scene victoryScene = new Scene(victoryRoot);
-            
-            VictoryController controller = loader.getController();
-            
-            // Calculate elapsed time
-            long endTime = System.currentTimeMillis();
-            long timeInSeconds = (endTime - startTime) / 1000;
-            String timeElapsed = String.format("%02d:%02d", timeInSeconds / 60, timeInSeconds % 60);
-            
-            controller.setGameStats((int)player.getScore(), timeElapsed, enemiesDefeated, currentLevel);
-            // Set the reference to this controller so it can properly return to main menu
-            controller.setGameController(this);
-            
-            // Stop the game loop
             gameLoopRunning = false;
+
+            // Get the current scene and its root pane
+            Scene currentScene = gameCanvas.getScene();
+            Parent gameRoot = currentScene.getRoot();
+
+            // 1. Fade out the game screen
+            FadeTransition fadeOut = new FadeTransition(Duration.seconds(0.5), gameRoot);
+            fadeOut.setFromValue(1.0);
+            fadeOut.setToValue(0.0);
+            fadeOut.setOnFinished(event -> {
+                try {
+                    // 2. Load the victory screen content
+                    FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/dungeon/fxml/Victory.fxml"));
+                    Parent victoryRoot = loader.load();
+                    victoryRoot.setOpacity(0.0);
+
+                    VictoryController controller = loader.getController();
+                    long endTime = System.currentTimeMillis();
+                    long timeInSeconds = (endTime - startTime) / 1000;
+                    String timeElapsed = String.format("%02d:%02d", timeInSeconds / 60, timeInSeconds % 60);
+                    controller.setGameStats((int)player.getScore(), timeElapsed, enemiesDefeated, currentLevel);
+                    controller.setGameController(this);
+
+                    // 3. Replace the scene's root
+                    currentScene.setRoot(victoryRoot);
+
+                    // 4. Fade in the victory screen
+                    FadeTransition fadeIn = new FadeTransition(Duration.seconds(0.5), victoryRoot);
+                    fadeIn.setFromValue(0.0);
+                    fadeIn.setToValue(1.0);
+                    fadeIn.play();
+
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
+            fadeOut.play();
             
-            // Transition to victory screen
-            Stage stage = (Stage) gameCanvas.getScene().getWindow();
-            stage.setScene(victoryScene);
-            stage.show();
         } catch (Exception e) {
             e.printStackTrace();
         }
