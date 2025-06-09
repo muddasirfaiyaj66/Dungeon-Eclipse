@@ -3,54 +3,123 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.effect.DropShadow?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.paint.Color?>
+<?import javafx.scene.paint.LinearGradient?>
+<?import javafx.scene.paint.Stop?>
+<?import javafx.scene.text.Font?>
 <?import javafx.scene.text.Text?>
 
 <StackPane styleClass="main-menu-background" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.dungeon.controllers.VictoryController">
-          
-    <VBox alignment="CENTER" maxHeight="400" maxWidth="500" spacing="30" style="-fx-background-color: black;" styleClass="victory-panel">
+
+    <VBox alignment="CENTER" maxHeight="655.0" maxWidth="604.0" prefHeight="655.0" prefWidth="604.0" spacing="30" style="-fx-background-color: black;" styleClass="victory-panel" StackPane.alignment="CENTER">
+
         <padding>
             <Insets bottom="30" left="40" right="40" top="30" />
         </padding>
-        
-        <Text fill="#75a87f" styleClass="title-text" text="Victory!">
+      <ImageView fitHeight="161.0" fitWidth="182.0" pickOnBounds="true" preserveRatio="true">
+         <image>
+            <Image url="@../assets/GIFS/victory.gif" />
+         </image>
+      </ImageView>
+
+        <Text styleClass="title-text" text="Victory!">
             <effect>
                 <DropShadow radius="10" spread="0.4" />
             </effect>
+            <font>
+                <Font name="System Bold" size="48" />
+            </font>
+         <fill>
+            <LinearGradient endX="1.0" endY="1.0">
+               <stops>
+                  <Stop>
+                     <color>
+                        <Color red="0.04038986191153526" green="0.7789473533630371" blue="0.23733852803707123" />
+                     </color>
+                  </Stop>
+                  <Stop offset="1.0">
+                     <color>
+                        <Color red="1.0" green="1.0" blue="1.0" />
+                     </color>
+                  </Stop>
+               </stops>
+            </LinearGradient>
+         </fill>
         </Text>
-        
+
         <VBox alignment="CENTER" spacing="15">
             <Text fx:id="congratsText" styleClass="score-text" text="Congratulations, adventurer!">
                 <fill>
-                    <javafx.scene.paint.Color blue="0.9" green="0.9" red="0.9" />
+               <LinearGradient endX="1.0" endY="1.0">
+                  <stops>
+                     <Stop>
+                        <color>
+                           <Color red="0.04038986191153526" green="0.7789473533630371" blue="0.23733852803707123" />
+                        </color>
+                     </Stop>
+                     <Stop offset="1.0">
+                        <color>
+                           <Color red="1.0" green="1.0" blue="1.0" />
+                        </color>
+                     </Stop>
+                  </stops>
+               </LinearGradient>
                 </fill>
+            <font>
+               <Font name="System Bold Italic" size="14.0" />
+            </font>
             </Text>
-            
+
             <Text fx:id="scoreText" styleClass="score-text" text="Final Score: 0">
                 <fill>
-                    <javafx.scene.paint.Color blue="0.9" green="0.9" red="0.9" />
+                    <Color red="0.9" green="0.9" blue="0.9" />
                 </fill>
+            <font>
+               <Font name="System Bold Italic" size="13.0" />
+            </font>
             </Text>
-            
+
             <Text fx:id="timeText" styleClass="score-text" text="Time: 00:00">
                 <fill>
-                    <javafx.scene.paint.Color blue="0.9" green="0.9" red="0.9" />
+                    <Color red="0.9" green="0.9" blue="0.9" />
                 </fill>
+            <font>
+               <Font name="System Bold" size="12.0" />
+            </font>
             </Text>
-            
+
             <Text fx:id="enemiesText" styleClass="score-text" text="Enemies Defeated: 0">
                 <fill>
-                    <javafx.scene.paint.Color blue="0.9" green="0.9" red="0.9" />
+                    <Color red="0.9" green="0.9" blue="0.9" />
                 </fill>
+            <font>
+               <Font name="System Bold" size="12.0" />
+            </font>
             </Text>
         </VBox>
-        
+
         <VBox alignment="CENTER" spacing="15" styleClass="menu-buttons">
-            <Button fx:id="nextLevelButton" onAction="#startNextLevel" styleClass="menu-button" text="Next Level" />
-            <Button fx:id="mainMenuButton" onAction="#returnToMainMenu" styleClass="menu-button" text="Main Menu" />
-            <Button fx:id="quitButton" onAction="#quitGame" styleClass="menu-button" text="Quit Game" />
+            <Button fx:id="nextLevelButton" onAction="#startNextLevel" prefHeight="30" prefWidth="120" style="-fx-background-color: seagreen;" styleClass="menu-button" text="Next Level" textFill="WHITE">
+                <font>
+                    <Font name="System Bold Italic" size="14" />
+                </font>
+            </Button>
+
+            <Button fx:id="mainMenuButton" onAction="#returnToMainMenu" prefHeight="30" prefWidth="120" style="-fx-background-color: seagreen;" styleClass="menu-button" text="Main Menu" textFill="WHITE">
+                <font>
+                    <Font name="System Bold Italic" size="14" />
+                </font>
+            </Button>
+
+            <Button fx:id="quitButton" onAction="#quitGame" prefHeight="30" prefWidth="120" style="-fx-background-color: seagreen;" styleClass="menu-button" text="Quit Game" textFill="WHITE">
+                <font>
+                    <Font name="System Bold Italic" size="14" />
+                </font>
+            </Button>
         </VBox>
     </VBox>
 </StackPane>

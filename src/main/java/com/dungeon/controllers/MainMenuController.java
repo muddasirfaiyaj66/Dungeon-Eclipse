@@ -1,15 +1,20 @@
 package com.dungeon.controllers;
 
+import javafx.animation.FadeTransition;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 import javafx.event.ActionEvent;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
+import com.dungeon.utils.UIUtils;
+import javafx.scene.paint.Color;
 
 public class MainMenuController {
     
@@ -33,41 +38,49 @@ public class MainMenuController {
     private void startNewGame() {
         try {
             System.out.println("Starting new game...");
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/dungeon/fxml/GameScene.fxml"));
-            Parent gameRoot = loader.load();
             
-            // Create a properly sized scene
-            Scene gameScene = new Scene(gameRoot, 1024, 768);
-            
-            // Get the current stage from the button
-            Stage stage = (Stage) newGameButton.getScene().getWindow();
-            
-            // Configure stage properties
-            stage.setResizable(true);
-            stage.setMinWidth(800);
-            stage.setMinHeight(600);
-            
-            // Get the game controller before setting the scene
-            GameController gameController = loader.getController();
-            
-            // Set the scene
-            stage.setScene(gameScene);
-            
-            // Make sure the stage is showing
-            if (!stage.isShowing()) {
-                stage.show();
-            }
-            
-            // Make sure we initialize the game controller after the scene is shown
-            Platform.runLater(() -> {
-                System.out.println("Initializing game controller...");
-                gameController.onSceneReady();
-                
-                // Force focus on the game canvas
-                gameScene.getRoot().requestFocus();
-                
-                System.out.println("Game initialized successfully");
+            // Get the current scene and its root pane
+            Scene currentScene = newGameButton.getScene();
+            Parent rootPane = currentScene.getRoot();
+
+            // 1. Fade out the main menu
+            FadeTransition fadeOut = new FadeTransition(Duration.seconds(0.5), rootPane);
+            fadeOut.setFromValue(1.0);
+            fadeOut.setToValue(0.0);
+            fadeOut.setOnFinished(event -> {
+                try {
+                    // 2. Load the game scene content
+                    FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/dungeon/fxml/GameScene.fxml"));
+                    Parent gameRoot = loader.load();
+                    gameRoot.setStyle("-fx-background-color: rgb(70, 86, 105);"); // Prevent flash
+                    gameRoot.setOpacity(0.0); // Start transparent for fade-in
+
+                    // 3. Replace the scene's root with the new game content
+                    currentScene.setRoot(gameRoot);
+                    
+                    // 4. Fade in the new game scene
+                    FadeTransition fadeIn = new FadeTransition(Duration.seconds(0.5), gameRoot);
+                    fadeIn.setFromValue(0.0);
+                    fadeIn.setToValue(1.0);
+                    fadeIn.setOnFinished(e -> {
+                        // 5. Initialize the controller and focus after the fade-in is complete
+                        Platform.runLater(() -> {
+                            System.out.println("Initializing game controller...");
+                            GameController gameController = loader.getController();
+                            gameController.onSceneReady();
+                            gameRoot.requestFocus();
+                            System.out.println("Game initialized successfully");
+                        });
+                    });
+                    fadeIn.play();
+
+                } catch (Exception e) {
+                    System.err.println("Error during scene transition: " + e.getMessage());
+                    e.printStackTrace();
+                }
             });
+            fadeOut.play();
+
         } catch (Exception e) {
             System.err.println("Error starting new game: " + e.getMessage());
             e.printStackTrace();
@@ -84,8 +97,12 @@ public class MainMenuController {
             
             Stage tutorialStage = new Stage();
             tutorialStage.setTitle("How to Play");
+            tutorialStage.initModality(Modality.APPLICATION_MODAL);
+            tutorialStage.initOwner(tutorialButton.getScene().getWindow());
+
             tutorialStage.setScene(tutorialScene);
-            tutorialStage.show();
+            UIUtils.setStageIcon(tutorialStage);
+            tutorialStage.showAndWait();
         } catch (Exception e) {
             // If the tutorial screen doesn't exist yet, show a simple alert
             Alert alert = new Alert(AlertType.INFORMATION);
@@ -111,20 +128,29 @@ public class MainMenuController {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/dungeon/fxml/HighScores.fxml"));
             Parent highScoresRoot = loader.load();
+
+            HighScoresController highScoresController = loader.getController();
+            highScoresController.setMainMenuController(this); 
+
             Scene highScoresScene = new Scene(highScoresRoot);
             
             Stage highScoresStage = new Stage();
             highScoresStage.setTitle("High Scores");
+            highScoresStage.initModality(Modality.APPLICATION_MODAL);
+            highScoresStage.initOwner(highScoreButton.getScene().getWindow());
             highScoresStage.setScene(highScoresScene);
-            highScoresStage.show();
+            UIUtils.setStageIcon(highScoresStage);
+            highScoresStage.showAndWait();
+            
         } catch (Exception e) {
-            // If the high scores screen doesn't exist yet, show a simple alert
-            Alert alert = new Alert(AlertType.INFORMATION);
-            alert.setTitle("High Scores");
-            alert.setHeaderText("High Scores");
-            alert.setContentText("No scores recorded yet. Play the game to set new records!");
-            alert.showAndWait();
+            System.err.println("Error loading HighScores.fxml: " + e.getMessage());
             e.printStackTrace();
+            // Fallback alert if loading fails
+            Alert alert = new Alert(AlertType.ERROR);
+            alert.setTitle("Error");
+            alert.setHeaderText("Could Not Load High Scores");
+            alert.setContentText("There was an error trying to display the high scores. Please try again later.");
+            alert.showAndWait();
         }
     }
 
@@ -134,20 +160,48 @@ public class MainMenuController {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/dungeon/fxml/Options.fxml"));
             Parent optionsRoot = loader.load();
+
             Scene optionsScene = new Scene(optionsRoot);
             
+            // Apply stylesheet if you have one
+            try {
+                String cssPath = "/com/dungeon/styles/main.css"; 
+                String css = getClass().getResource(cssPath).toExternalForm();
+                if (css != null) {
+                    optionsScene.getStylesheets().add(css);
+                } else {
+                    System.out.println("Options stylesheet not found at: " + cssPath);
+                }
+            } catch (NullPointerException e) {
+                System.out.println("Options stylesheet not found or error constructing path: " + e.getMessage());
+            }
+
+            // Create a new stage for the options window
             Stage optionsStage = new Stage();
             optionsStage.setTitle("Options");
+            optionsStage.initModality(Modality.APPLICATION_MODAL); // Makes it block the main menu
+            
+            // Set the owner of the new stage to the main menu's stage
+            Stage ownerStage = (Stage) optionsButton.getScene().getWindow();
+            optionsStage.initOwner(ownerStage);
+            
             optionsStage.setScene(optionsScene);
-            optionsStage.show();
+            optionsStage.setResizable(false); // Options dialogs are often not resizable
+            
+            UIUtils.setStageIcon(optionsStage);
+            
+            System.out.println("Showing options window (modal from MainMenu).");
+            optionsStage.showAndWait(); // Show and wait for it to be closed
+            System.out.println("Options window closed, returning to Main Menu.");
+
         } catch (Exception e) {
-            // If the options screen doesn't exist yet, show a simple alert
-            Alert alert = new Alert(AlertType.INFORMATION);
-            alert.setTitle("Options");
-            alert.setHeaderText("Game Options");
-            alert.setContentText("Options menu is coming soon!");
-            alert.showAndWait();
+            System.err.println("Error loading Options.fxml from MainMenu: " + e.getMessage());
             e.printStackTrace();
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Error");
+            alert.setHeaderText("Could Not Load Options");
+            alert.setContentText("There was an error trying to display the options menu.");
+            alert.showAndWait();
         }
     }
 

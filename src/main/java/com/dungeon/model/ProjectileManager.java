@@ -17,18 +17,18 @@ import java.util.Random;
  * Manages all projectiles in the game world
  */
 public class ProjectileManager {
-    private List<Projectile> projectiles;
-    private Random random;
+    private static final double DEFAULT_PROJECTILE_SPEED = 400.0;
+    private static final double DEFAULT_PROJECTILE_SIZE = 8.0;
+    private static final double DEFAULT_PROJECTILE_DAMAGE = 10.0;
+    private static final double DEFAULT_PROJECTILE_LIFETIME = 2.0;
     
-    // Cooldown tracking for player weapons
-    private double playerFireCooldown = 0;
-    
-    // Default projectile settings
-    private static final double DEFAULT_PROJECTILE_SIZE = 5;
-    private static final double DEFAULT_PROJECTILE_SPEED = 300; // pixels per second
+    private final List<Projectile> projectiles;
+    private double playerFireCooldown;
+    private final Random random;
     
     public ProjectileManager() {
         this.projectiles = new ArrayList<>();
+        this.playerFireCooldown = 0;
         this.random = new Random();
     }
     
@@ -37,12 +37,12 @@ public class ProjectileManager {
      * @param deltaTime Time since last update in seconds
      */
     public void update(double deltaTime) {
-        // Update cooldowns
+        // Update cooldown
         if (playerFireCooldown > 0) {
             playerFireCooldown -= deltaTime;
         }
         
-        // Update projectiles
+        // Update projectiles and remove expired ones
         Iterator<Projectile> iterator = projectiles.iterator();
         while (iterator.hasNext()) {
             Projectile projectile = iterator.next();
@@ -98,7 +98,7 @@ public class ProjectileManager {
         double projectileSpeed = DEFAULT_PROJECTILE_SPEED;
         double projectileSize = DEFAULT_PROJECTILE_SIZE;
         Color projectileColor = Color.BLUE;
-        double damage = player.getEquippedWeapon() != null ? player.getEquippedWeapon().getType().getDamage() : 5;
+        double damage = player.getEquippedWeapon() != null ? player.getEquippedWeapon().getDamage() : DEFAULT_PROJECTILE_DAMAGE;
         boolean piercing = false;
         boolean explosive = false;
         double explosionRadius = 0;
@@ -108,7 +108,8 @@ public class ProjectileManager {
             case BOW:
                 projectileColor = Color.BROWN;
                 projectileSpeed *= 1.2;
-                playerFireCooldown = 1.0 / (player.getEquippedWeapon() != null ? player.getEquippedWeapon().getType().getCooldown() : 1.0);
+                playerFireCooldown = 1.0 / (player.getEquippedWeapon() != null ? 
+                    player.getEquippedWeapon().getAttackSpeed() : 1.0);
                 break;
                 
             case DAGGER:
@@ -346,7 +347,7 @@ public class ProjectileManager {
      * @return List of projectiles
      */
     public List<Projectile> getProjectiles() {
-        return projectiles;
+        return new ArrayList<>(projectiles);
     }
     
     /**

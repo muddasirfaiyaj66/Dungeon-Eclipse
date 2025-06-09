@@ -65,12 +65,18 @@ public class ProjectileAttack {
         // Draw based on projectile type
         switch (type) {
             case ARROW:
-                // Draw arrow
-                gc.setFill(Color.BROWN);
+                // Draw arrow - all parts will now use this.color
+                gc.setFill(this.color); 
+
+                // Shaft
                 gc.fillRect(-PROJECTILE_SIZE, -PROJECTILE_SIZE/4, PROJECTILE_SIZE*1.5, PROJECTILE_SIZE/2);
                 
-                // Arrow head
-                gc.setFill(Color.GRAY);
+                // Fletching (can be a slightly different shade or same color)
+                // gc.setFill(this.color.darker()); // Example: darker shade for fletching
+                gc.fillRect(-PROJECTILE_SIZE - (PROJECTILE_SIZE * 0.6) / 2, -(PROJECTILE_SIZE / 3) / 2, PROJECTILE_SIZE * 0.6, PROJECTILE_SIZE / 3);
+
+                // Arrow head (can be a slightly different shade or same color)
+                // gc.setFill(this.color.brighter()); // Example: brighter shade for head
                 double[] xPoints = {PROJECTILE_SIZE*1.5, PROJECTILE_SIZE, PROJECTILE_SIZE};
                 double[] yPoints = {0, -PROJECTILE_SIZE/2, PROJECTILE_SIZE/2};
                 gc.fillPolygon(xPoints, yPoints, 3);

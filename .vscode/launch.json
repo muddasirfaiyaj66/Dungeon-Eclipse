@@ -1,0 +1,27 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        
+        {
+            "type": "java",
+            "name": "Launch Dungeon Eclipse",
+            "request": "launch",
+            "mainClass": "com.dungeon.Main",
+            "projectName": "dungeon-eclipse",
+            "vmArgs": [
+                "--module-path",
+                "C:/Program Files/Java/openjfx-21.0.7_windows-x64_bin-sdk/javafx-sdk-21.0.7/lib",
+                "--add-modules",
+                "javafx.controls,javafx.fxml,javafx.media",
+                "--enable-preview",
+                "--add-opens",
+                "javafx.graphics/javafx.scene=ALL-UNNAMED"
+            ],
+            "classpath": [
+                "${workspaceFolder}/target/classes",
+                "${workspaceFolder}/target/dependency/*"
+            ],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+} 

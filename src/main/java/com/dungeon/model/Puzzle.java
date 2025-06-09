@@ -152,78 +152,7 @@ public class Puzzle {
         return new Puzzle(PuzzleType.RIDDLE, description, selectedRiddle[0], selectedRiddle[1]);
     }
     
-    /**
-     * Creates a random pattern puzzle
-     * @return A new pattern puzzle
-     */
-    public static Puzzle createPatternPuzzle() {
-        Random random = new Random();
-        int patternType = random.nextInt(3);
-        
-        String pattern;
-        String answer;
-        String description = "Identify the pattern and provide the missing value.";
-        
-        switch (patternType) {
-            case 0: // Letter pattern
-                String[] letterPatterns = {
-                    "A, C, E, ?, I", "G",
-                    "Z, Y, X, ?, V", "W",
-                    "A, B, D, G, ?", "K",
-                    "O, T, T, F, F, S, S, ?", "E",
-                    "B, C, D, F, G, H, ?", "J"
-                };
-                int index = random.nextInt(letterPatterns.length / 2) * 2;
-                pattern = letterPatterns[index];
-                answer = letterPatterns[index + 1];
-                break;
-                
-            case 1: // Word pattern
-                String[] wordPatterns = {
-                    "CAT, DOG, BIRD, ?", "FISH",
-                    "ONE, TWO, THREE, ?", "FOUR",
-                    "APPLE, ORANGE, BANANA, ?", "GRAPE",
-                    "NORTH, EAST, SOUTH, ?", "WEST",
-                    "RED, BLUE, YELLOW, ?", "GREEN"
-                };
-                index = random.nextInt(wordPatterns.length / 2) * 2;
-                pattern = wordPatterns[index];
-                answer = wordPatterns[index + 1];
-                break;
-                
-            default: // Number pattern with operations
-                int start = random.nextInt(5) + 1;
-                int[] operations = new int[5];
-                for (int i = 0; i < operations.length; i++) {
-                    operations[i] = random.nextInt(5) + 1;
-                }
-                
-                StringBuilder patternBuilder = new StringBuilder();
-                int current = start;
-                for (int i = 0; i < 4; i++) {
-                    patternBuilder.append(current);
-                    if (i < 3) {
-                        patternBuilder.append(", ");
-                    } else {
-                        patternBuilder.append(", ?");
-                    }
-                    
-                    // Apply operation
-                    if (i % 2 == 0) {
-                        current += operations[i];
-                    } else {
-                        current *= operations[i];
-                    }
-                }
-                
-                pattern = patternBuilder.toString();
-                answer = String.valueOf(current);
-                break;
-        }
-        
-        return new Puzzle(PuzzleType.PATTERN, description, pattern, answer);
-    }
-    
+
     /**
      * Creates a random puzzle of any type
      * @return A new random puzzle
@@ -236,12 +165,10 @@ public class Puzzle {
             case 0:
                 return createSequencePuzzle();
             case 1:
-                return createRiddlePuzzle();
+                return createRiddlePuzzle();   
             case 2:
-                return createPatternPuzzle();
-            case 3:
                 return createMathPuzzle();
-            case 4:
+            case 3:
                 return createWordPuzzle();
             default:
                 return createLogicPuzzle();
@@ -396,15 +323,17 @@ public class Puzzle {
 
             default: // Word chain
                 String[] wordChains = {
-                    "COLD -> WARM -> HOT", "COLD",
-                    "SMILE -> LAUGH -> CRY", "SMILE",
-                    "START -> BEGIN -> END", "START",
-                    "UP -> DOWN -> SIDE", "UP",
-                    "DAY -> NIGHT -> MORNING", "DAY"
+                    "COLD -> WARM -> HOT", "COLD", "WARM", "HOT",
+                    "SMILE -> LAUGH -> CRY", "SMILE", "LAUGH", "CRY",
+                    "START -> BEGIN -> END", "START", "BEGIN", "END",
+                    "UP -> DOWN -> SIDE", "UP", "DOWN", "SIDE",
+                    "DAY -> NIGHT -> MORNING", "DAY", "NIGHT", "MORNING"
                 };
-                index = random.nextInt(wordChains.length / 2) * 2;
-                question = "What's the first word in this chain: " + wordChains[index];
-                answer = wordChains[index + 1];
+                index = random.nextInt(wordChains.length / 4) * 4;
+                int position = random.nextInt(3); // 0 for first, 1 for middle, 2 for last
+                String positionText = position == 0 ? "first" : (position == 1 ? "middle" : "last");
+                question = "What's the " + positionText + " word in this chain: " + wordChains[index];
+                answer = wordChains[index + 1 + position];
                 break;
         }
 
@@ -421,14 +350,21 @@ public class Puzzle {
         switch (puzzleType) {
             case 0: // Color sequence
                 String[] colors = {"RED", "BLUE", "GREEN", "YELLOW", "PURPLE"};
+                // Create a repeating pattern of 3 colors
+                int patternLength = 3;
                 int[] sequence = new int[4];
+                int startColor = random.nextInt(colors.length);
+                
+                // Generate a sequence that repeats every 3 colors
                 for (int i = 0; i < sequence.length; i++) {
-                    sequence[i] = random.nextInt(colors.length);
+                    sequence[i] = (startColor + i) % patternLength;
                 }
+                
                 question = "What color comes next in this sequence: " +
                           colors[sequence[0]] + ", " + colors[sequence[1]] + ", " +
                           colors[sequence[2]] + ", " + colors[sequence[3]] + ", ?";
-                answer = colors[sequence[3]];
+                // The answer is the next color in the repeating pattern
+                answer = colors[(startColor + 4) % patternLength];
                 break;
 
             case 1: // True/False logic

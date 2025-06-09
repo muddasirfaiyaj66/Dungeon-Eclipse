@@ -1,10 +1,13 @@
 package com.dungeon.model;
 
+import javafx.scene.paint.Color;
+
 /**
  * Represents a weapon that the player can equip to deal damage to enemies
  */
 public class Weapon extends Item {
-    private int damage;
+    private int damage; // This will store the calculated damage
+    private final int baseDamage; // Stores the original base damage
     private double attackRange;
     private double attackSpeed; // Attacks per second
     private WeaponType weaponType;
@@ -13,20 +16,24 @@ public class Weapon extends Item {
      * Types of weapons with different attributes
      */
     public enum WeaponType {
-        SWORD(1.0, 50, 1.5),    // Balanced
-        DAGGER(0.7, 40, 2.0),   // Fast but short range
-        AXE(1.3, 45, 1.0),      // High damage but slow
-        SPEAR(0.9, 70, 1.2),    // Long range
-        BOW(0.8, 200, 0.8);     // Ranged weapon
+        SWORD(1.0, 50, 1.5, "/com/dungeon/assets/images/SWORD.png", Color.LIGHTGRAY),    // Balanced
+        DAGGER(0.7, 40, 2.0, "/com/dungeon/assets/images/DAGGER.png", Color.SILVER),   // Fast but short range
+        AXE(1.3, 45, 1.0, "/com/dungeon/assets/images/AXE.png", Color.BROWN),      // High damage but slow
+        SPEAR(0.9, 70, 1.2, "/com/dungeon/assets/images/SPEAR.png", Color.SANDYBROWN),    // Long range
+        BOW(0.8, 200, 0.8, "/com/dungeon/assets/images/BOW.png", Color.GREENYELLOW);     // Ranged weapon
         
         private final double damageMultiplier;
         private final double range;
         private final double speedMultiplier;
+        private final String imagePath;
+        private final Color projectileColor; // Added for projectile visual
         
-        WeaponType(double damageMultiplier, double range, double speedMultiplier) {
+        WeaponType(double damageMultiplier, double range, double speedMultiplier, String imagePath, Color projectileColor) {
             this.damageMultiplier = damageMultiplier;
             this.range = range;
             this.speedMultiplier = speedMultiplier;
+            this.imagePath = imagePath;
+            this.projectileColor = projectileColor;
         }
         
         public double getDamageMultiplier() {
@@ -40,6 +47,14 @@ public class Weapon extends Item {
         public double getSpeedMultiplier() {
             return speedMultiplier;
         }
+        
+        public String getImagePath() {
+            return imagePath;
+        }
+
+        public Color getProjectileColor() {
+            return projectileColor;
+        }
     }
     
     /**
@@ -48,34 +63,31 @@ public class Weapon extends Item {
      * @param description Weapon description
      * @param baseDamage Base damage value
      * @param weaponType Type of weapon
-     * @param iconPath Path to weapon icon (optional)
      */
-    public Weapon(String name, String description, int baseDamage, WeaponType weaponType, String iconPath) {
-        super(name, description, ItemType.WEAPON, baseDamage, false, iconPath);
+    public Weapon(String name, String description, int baseDamage, WeaponType weaponType) {
+        super(name, description, ItemType.WEAPON, baseDamage, false, weaponType.getImagePath());
         
+        this.baseDamage = baseDamage; // Initialize baseDamage
         this.weaponType = weaponType;
-        this.damage = (int)(baseDamage * weaponType.getDamageMultiplier());
+        this.damage = (int)(baseDamage * weaponType.getDamageMultiplier()); // Calculated damage
         this.attackRange = weaponType.getRange();
         this.attackSpeed = 1.0 * weaponType.getSpeedMultiplier();
     }
     
     /**
-     * Creates a new weapon with default icon
-     * @param name Weapon name
-     * @param description Weapon description
-     * @param baseDamage Base damage value
-     * @param weaponType Type of weapon
-     */
-    public Weapon(String name, String description, int baseDamage, WeaponType weaponType) {
-        this(name, description, baseDamage, weaponType, null);
-    }
-    
-    /**
-     * Gets the weapon's damage value
-     * @return Damage value
+     * Gets the weapon's calculated damage value
+     * @return Calculated damage value
      */
     public int getDamage() {
         return damage;
+    }
+
+    /**
+     * Gets the weapon's original base damage value
+     * @return Original base damage value
+     */
+    public int getBaseDamage() {
+        return baseDamage;
     }
     
     /**

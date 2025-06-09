@@ -1,32 +1,37 @@
 package com.dungeon.model.entity;
-
-import javafx.geometry.Point2D;
-import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.input.KeyCode;
-import javafx.scene.paint.Color;
-import java.util.Set;
-import java.util.HashSet;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+
+import com.dungeon.model.Armor;
 import com.dungeon.model.Inventory;
 import com.dungeon.model.Item;
 import com.dungeon.model.Weapon;
-import com.dungeon.model.Armor;
+
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
+import javafx.geometry.Point2D;
+import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.image.Image;
+import javafx.scene.input.KeyCode;
+import javafx.scene.paint.Color;
 
 public class Player extends Entity {
+    private Image playerImage;
     private static final double DEFAULT_HEALTH = 100;
     private static final double DEFAULT_SPEED = 200; // pixels per second
     private static final double DEFAULT_SIZE = 30;
     private static final double MELEE_DAMAGE = 20;
     private static final double RANGED_DAMAGE = 15;
     private static final double ATTACK_COOLDOWN = 0.5; // seconds
+    private static final javafx.scene.paint.Color DEFAULT_PROJECTILE_COLOR = javafx.scene.paint.Color.YELLOW;
     
     // Combat
     private final Set<ProjectileAttack> projectiles;
     private double attackCooldown;
     private Point2D aimDirection;
+    private Point2D facingDirection;
     private boolean isMeleeAttacking;
     private double meleeAttackTimer;
     private List<Weapon> weapons;
@@ -50,78 +55,42 @@ public class Player extends Entity {
     private Armor equippedArmor;
     private final Inventory inventory;
     private final int maxInventorySize = 20;
-
-    public enum WeaponType {
-        SWORD(MELEE_DAMAGE, 0.4, "Sword", true),
-        BOW(RANGED_DAMAGE, 0.6, "Bow", false),
-        STAFF(RANGED_DAMAGE * 1.2, 0.8, "Staff", false),
-        AXE(MELEE_DAMAGE * 1.3, 0.7, "Axe", true),
-        DAGGER(MELEE_DAMAGE * 1.3, 0.7, "Dagger", true);
-        
-        private final double damage;
-        private final double cooldown;
-        private final String name;
-        private final boolean isMelee;
-        
-        WeaponType(double damage, double cooldown, String name, boolean isMelee) {
-            this.damage = damage;
-            this.cooldown = cooldown;
-            this.name = name;
-            this.isMelee = isMelee;
-        }
-        
-        public double getDamage() { return damage; }
-        public double getCooldown() { return cooldown; }
-        public String getName() { return name; }
-        public boolean isMelee() { return isMelee; }
-    }
-    
-    public static class Weapon {
-        private final WeaponType type;
-        private final Color color;
-        
-        public Weapon(WeaponType type) {
-            this.type = type;
-            
-            // Assign color based on weapon type
-            switch (type) {
-                case SWORD:
-                    this.color = Color.SILVER;
-                    break;
-                case BOW:
-                    this.color = Color.BROWN;
-                    break;
-                case STAFF:
-                    this.color = Color.PURPLE;
-                    break;
-                case AXE:
-                    this.color = Color.DARKGRAY;
-                    break;
-                default:
-                    this.color = Color.WHITE;
-            }
-        }
-        
-        public WeaponType getType() { return type; }
-        public Color getColor() { return color; }
-    }
+    private Weapon currentWeapon;
+    private double lastDamageBlocked; // Field to store the last amount of damage blocked
 
     public Player(double x, double y) {
         super(x, y, DEFAULT_HEALTH, DEFAULT_SPEED, DEFAULT_SIZE);
-        
+         try {
+            // Load the player image from resources
+          playerImage = new Image(
+    getClass().getResourceAsStream("/com/dungeon/assets/images/player.png"),
+    64,   // width
+    64,   // height
+    true, // preserve ratio
+    true  // smooth
+);
+this.size = 64;
+
+            // Adjust size to match image dimensions if needed
+            this.size = Math.max(playerImage.getWidth(), playerImage.getHeight());
+        } catch (Exception e) {
+            System.err.println("Error loading player image: " + e.getMessage());
+            playerImage = null; 
+        }
         // Initialize combat
         this.projectiles = new HashSet<>();
         this.attackCooldown = 0;
         this.aimDirection = new Point2D(1, 0);
+        this.facingDirection = new Point2D(1, 0);
         this.isMeleeAttacking = false;
         this.meleeAttackTimer = 0;
         
-        // Initialize weapons
+        // Initialize weapons with basic weapons
         this.weapons = new ArrayList<>();
-        this.weapons.add(new Weapon(WeaponType.SWORD));
-        this.weapons.add(new Weapon(WeaponType.BOW));
-        this.weapons.add(new Weapon(WeaponType.STAFF));
-        this.weapons.add(new Weapon(WeaponType.AXE));
+        this.weapons.add(Weapon.createBasicWeapon());
+        this.weapons.add(new Weapon("Basic Bow", "A simple bow for ranged attacks", 15, Weapon.WeaponType.BOW));
+        this.weapons.add(new Weapon("Basic Staff", "A magical staff for spellcasting", 20, Weapon.WeaponType.SPEAR));
+        this.weapons.add(new Weapon("Basic Axe", "A heavy axe for powerful strikes", 25, Weapon.WeaponType.AXE));
         this.currentWeaponIndex = 0;
         
         // Initialize stats
@@ -133,6 +102,40 @@ public class Player extends Entity {
         
         // Initialize inventory
         this.inventory = new Inventory(maxInventorySize);
+        this.currentWeapon = Weapon.createBasicWeapon();
+    }
+
+    @Override
+    public void takeDamage(double incomingDamage) {
+        System.out.println("[DEBUG] Player.takeDamage called. Incoming: " + incomingDamage + ", Equipped Armor: " + (equippedArmor != null ? equippedArmor.getName() : "None"));
+        this.lastDamageBlocked = 0; // Reset before calculation
+
+        if (!isAlive() || incomingDamage <= 0) return;
+
+        double actualDamageTaken = incomingDamage;
+        
+        if (equippedArmor != null) {
+            double reductionPercentage = equippedArmor.getArmorType().getDamageReductionPercentage();
+            this.lastDamageBlocked = incomingDamage * reductionPercentage;
+            actualDamageTaken = incomingDamage - this.lastDamageBlocked;
+            
+            System.out.println("[DEBUG] Armor Type: " + equippedArmor.getArmorType() + ", Reduction %: " + reductionPercentage);
+            System.out.println("[DEBUG] Damage Reduced by Armor: " + this.lastDamageBlocked);
+            if (this.lastDamageBlocked > 0) {
+                System.out.println("Armor blocked " + String.format("%.1f", this.lastDamageBlocked) + " damage.");
+            }
+        } else {
+            System.out.println("[DEBUG] No armor equipped or equippedArmor is null.");
+        }
+
+        actualDamageTaken = Math.max(0, actualDamageTaken);
+
+        System.out.println("[DEBUG] Calling super.takeDamage with: " + actualDamageTaken + " (Original: " + incomingDamage + ")");
+        super.takeDamage(actualDamageTaken);
+    }
+
+    public double getLastDamageBlocked() {
+        return this.lastDamageBlocked;
     }
 
     public void handleInput(Set<KeyCode> activeKeys, double deltaTime) {
@@ -150,6 +153,15 @@ public class Player extends Entity {
         }
         if (activeKeys.contains(KeyCode.D)) {
             dx += 1;
+        }
+        
+        // Update facing direction based on movement
+        if (dx != 0 || dy != 0) {
+            // Normalize the direction vector
+            double length = Math.sqrt(dx * dx + dy * dy);
+            dx /= length;
+            dy /= length;
+            facingDirection = new Point2D(dx, dy);
         }
         
         // Normalize diagonal movement
@@ -207,14 +219,33 @@ public class Player extends Entity {
         Point2D mousePos = new Point2D(mouseX, mouseY);
         Point2D direction = mousePos.subtract(playerCenter).normalize();
         
+        double damageToDeal = RANGED_DAMAGE; 
+        Color projectileColor = DEFAULT_PROJECTILE_COLOR;
+        // ProjectileAttack.ProjectileType type = ProjectileAttack.ProjectileType.ARROW; // Default type
+
+        if (equippedWeapon != null) {
+            damageToDeal = equippedWeapon.getDamage();
+            if (equippedWeapon.getWeaponType() != null) {
+                Color colorFromWeapon = equippedWeapon.getWeaponType().getProjectileColor();
+                if (colorFromWeapon != null) {
+                    projectileColor = colorFromWeapon;
+                }
+                // Future: Consider deriving ProjectileAttack.ProjectileType from WeaponType
+                // For example:
+                // if (equippedWeapon.getWeaponType() == Weapon.WeaponType.STAFF) { // Assuming Weapon.WeaponType exists
+                //    type = ProjectileAttack.ProjectileType.MAGIC_BOLT; // Assuming such a type exists in ProjectileAttack
+                // }
+            }
+        }
+        
         // Create projectile
         ProjectileAttack projectile = new ProjectileAttack(
             playerCenter.getX(), 
             playerCenter.getY(),
             direction,
-            RANGED_DAMAGE,
-            Color.YELLOW,
-            ProjectileAttack.ProjectileType.ARROW
+            damageToDeal,
+            projectileColor,
+            ProjectileAttack.ProjectileType.ARROW // Keeping ARROW type for now as it was not the reported issue
         );
         
         // Add to projectiles list
@@ -234,52 +265,97 @@ public class Player extends Entity {
 
     @Override
     public void render(GraphicsContext gc) {
-        // Get current weapon for coloring
-        Weapon currentWeapon = weapons.get(currentWeaponIndex);
+        // Render Player Body (rotates with WASD facingDirection)
+        if (playerImage != null) {
+            gc.save(); // Save for player body transformations
+            double playerCenterX = position.getX() + size / 2;
+            double playerCenterY = position.getY() + size / 2;
+            double bodyAngle;
+            if (facingDirection.getY() < -0.1) { 
+                bodyAngle = -90; 
+            } else if (facingDirection.getY() > 0.1) { 
+                bodyAngle = 90;  
+            } else {
+                bodyAngle = 0;   
+            }
+            gc.translate(playerCenterX, playerCenterY);
+            gc.rotate(bodyAngle);
+            if (facingDirection.getX() < 0 && bodyAngle == 0) { 
+                gc.scale(-1, 1); 
+            }
+            gc.drawImage(playerImage, -size / 2, -size / 2, size, size);
+            
+            if (equippedArmor != null) {
+                Color armorColor = equippedArmor.getArmorType().getTintColor();
         
-        // Draw player body
+                // Apply tint
+                gc.setFill(armorColor);
+                gc.setGlobalAlpha(0.3); // Keep tint subtle
+                gc.fillRect(-size / 2, -size / 2, size, size);
+
+                // Apply outline
+                gc.setStroke(armorColor.darker()); // Darker shade for contrast
+                gc.setLineWidth(2); // A visible line width, can be adjusted
+                gc.setGlobalAlpha(0.7); // Make outline more prominent than tint
+                gc.strokeRect(-size / 2, -size / 2, size, size);
+
+                gc.setGlobalAlpha(1.0); // Reset alpha for subsequent drawing
+            }
+            gc.restore(); // Restore from player body transformations
+    } else {
+            // Fallback player rendering (unchanged)
         gc.setFill(Color.DARKBLUE);
         gc.fillOval(position.getX(), position.getY(), size, size);
-        
-        // Draw player face (eyes and mouth) looking in aim direction
-        double centerX = position.getX() + size / 2;
-        double centerY = position.getY() + size / 2;
-        
-        // Draw eyes
+            double cX = position.getX() + size / 2;
+            double cY = position.getY() + size / 2;
         double eyeSize = size / 8;
-        double eyeOffsetX = aimDirection.getX() * size / 6;
-        double eyeOffsetY = aimDirection.getY() * size / 6;
-        
-        // Left eye
+            double eyeOffsetX = facingDirection.getX() * size / 6;
+            double eyeOffsetY = facingDirection.getY() * size / 6;
         gc.setFill(Color.WHITE);
-        gc.fillOval(
-            centerX - size/4 + eyeOffsetX/2, 
-            centerY - size/4 + eyeOffsetY/2, 
-            eyeSize, 
-            eyeSize
-        );
+            gc.fillOval(cX - size/4 + eyeOffsetX/2, cY - size/4 + eyeOffsetY/2, eyeSize, eyeSize);
+            gc.fillOval(cX + size/4 + eyeOffsetX/2, cY + size/4 + eyeOffsetY/2, eyeSize, eyeSize); // Corrected Y offset for right eye
+        }
+
+        // Render Equipped Weapon (rotates with mouse aimDirection, independent of body)
+        if (equippedWeapon != null && equippedWeapon.getIcon() != null && !isMeleeAttacking) {
+            gc.save(); // Save for weapon transformations
+            Image weaponIcon = equippedWeapon.getIcon();
+            double weaponSize = size * 0.7; // Can be adjusted
+            // Position weapon relative to player center, slight offset forward based on aim
+            double weaponAnchorX = position.getX() + size / 2 + aimDirection.getX() * (size * 0.2); 
+            double weaponAnchorY = position.getY() + size / 2 + aimDirection.getY() * (size * 0.2);
+
+            // Calculate angle for weapon to point towards mouse (aimDirection)
+            double weaponAngle = Math.toDegrees(Math.atan2(aimDirection.getY(), aimDirection.getX()));
+
+            gc.translate(weaponAnchorX, weaponAnchorY); // Move to weapon's anchor point
+            gc.rotate(weaponAngle); // Rotate weapon to face aim direction
+            
+            // Draw the weapon icon. Anchor it so rotation is around its hilt or center.
+            // For an icon that points right by default, draw it at (-width/2, -height/2) if rotating around center
+            // Or adjust if the icon's natural "pointing" direction is different.
+            // Assuming weapon icon points right by default, offset slightly to simulate holding it.
+            gc.drawImage(weaponIcon, -weaponSize * 0.25, -weaponSize / 2, weaponSize, weaponSize);
+            
+            gc.restore(); // Restore from weapon transformations
+        }
         
-        // Right eye
-        gc.fillOval(
-            centerX + size/4 + eyeOffsetX/2, 
-            centerY - size/4 + eyeOffsetY/2, 
-            eyeSize, 
-            eyeSize
-        );
-        
-        // Draw weapon if melee attacking
+        // Melee Attack Animation (uses aimDirection)
         if (isMeleeAttacking) {
-            gc.setStroke(currentWeapon.getColor());
-            gc.setLineWidth(3);
+            gc.setStroke(Color.SILVER); 
+            // If you want to draw the actual weapon icon during melee, do it here, rotated by aimDirection
+            // For now, keeping the line animation:
+            double cX = position.getX() + size / 2;
+            double cY = position.getY() + size / 2;
             gc.strokeLine(
-                centerX,
-                centerY,
-                centerX + aimDirection.getX() * size * 1.5,
-                centerY + aimDirection.getY() * size * 1.5
+                cX,
+                cY,
+                cX + aimDirection.getX() * size * 1.5,
+                cY + aimDirection.getY() * size * 1.5
             );
         }
         
-        // Draw projectiles
+        // Draw Projectiles (already independent)
         for (ProjectileAttack projectile : projectiles) {
             projectile.render(gc);
         }
@@ -296,7 +372,9 @@ public class Player extends Entity {
     }
     
     public boolean useItem(Item item) {
-        if (item == null || !inventory.hasItem(item.getType())) return false;
+        if (item == null) return false;
+        // The primary logic for equipping items is now in InventoryController.
+        // This method will handle consumables or other direct-use items from player's perspective.
         
         boolean used = false;
         
@@ -307,41 +385,36 @@ public class Player extends Entity {
                 used = true;
                 break;
                 
+            // WEAPON and ARMOR are handled by InventoryController setting equipped items directly.
+            // No specific action needed here for equipping, but we could add stat changes or effects if desired.
             case WEAPON:
-                // We can't directly cast Item to Weapon since they're different types
-                // Instead, we'll create a corresponding weapon in our system
-                // In a full game, you would want to match attributes between Item and Weapon
-                WeaponType weaponType = WeaponType.SWORD; // Default
-                String weaponName = item.getName().toUpperCase();
-                if (weaponName.contains("BOW") || weaponName.contains("ARROW")) {
-                    weaponType = WeaponType.BOW;
-                } else if (weaponName.contains("STAFF") || weaponName.contains("MAGIC")) {
-                    weaponType = WeaponType.STAFF;
-                } else if (weaponName.contains("AXE")) {
-                    weaponType = WeaponType.AXE;
-                } else if (weaponName.contains("DAGGER") || weaponName.contains("KNIFE")) {
-                    weaponType = WeaponType.DAGGER;
+                // Example: if equipping a weapon has an immediate effect beyond just setting it.
+                // For now, we assume InventoryController handles the equipping part.
+                // If this.equippedWeapon is not null and matches item, it means it's equipped.
+                if (this.equippedWeapon != null && this.equippedWeapon.getName().equals(item.getName())) {
+                     System.out.println(item.getName() + " is already equipped or handled by InventoryController.");
                 }
-                
-                this.equippedWeapon = new Weapon(weaponType);
-                used = true;
+                // We don't mark 'used = true' here for equipping, as it's not consumed.
                 break;
                 
             case ARMOR:
-                // Same issue as with weapon - would need a more robust system
-                // Here we'll just note that armor was equipped
-                this.equippedArmor = null; // Would need a proper conversion
-                used = true;
+                if (this.equippedArmor != null && this.equippedArmor.getName().equals(item.getName())) {
+                    System.out.println(item.getName() + " is already equipped or handled by InventoryController.");
+                }
+                // We don't mark 'used = true' here for equipping.
                 break;
                 
             default:
-                // Other item types can be added later
+                System.out.println("Player.useItem: Unhandled item type " + item.getType());
                 break;
         }
         
         // Remove consumable items after use
         if (used && item.isConsumable()) {
+            // Ensure the item is actually in the inventory before trying to remove
+            if (inventory.hasItem(item.getType())) { 
             inventory.removeItem(item.getType(), 1);
+            }
         }
         
         return used;
@@ -399,8 +472,7 @@ public class Player extends Entity {
     }
 
     public double getMeleeDamage() {
-        Weapon currentWeapon = weapons.get(currentWeaponIndex);
-        return currentWeapon.getType().getDamage();
+        return equippedWeapon != null ? equippedWeapon.getDamage() : MELEE_DAMAGE;
     }
 
     public Set<ProjectileAttack> getProjectiles() {
@@ -501,5 +573,21 @@ public class Player extends Entity {
         
         // Set new position (boundary checking would be done in GameController)
         position = new Point2D(newX, newY);
+    }
+
+    public Weapon getWeapon() {
+        return currentWeapon;
+    }
+    
+    public void setWeapon(Weapon weapon) {
+        this.currentWeapon = weapon;
+    }
+
+    public List<Weapon> getWeapons() {
+        return weapons;
+    }
+    
+    public void setWeapons(List<Weapon> weapons) {
+        this.weapons = weapons;
     }
 }
