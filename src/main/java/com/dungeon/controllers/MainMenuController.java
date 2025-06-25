@@ -33,6 +33,9 @@ public class MainMenuController {
     private Button exitButton;
     
     @FXML
+    private Button chatButton;
+    
+    @FXML
     @SuppressWarnings("unused")
     private void startNewGame() {
         try {
@@ -200,6 +203,32 @@ public class MainMenuController {
             alert.setTitle("Error");
             alert.setHeaderText("Could Not Load Options");
             alert.setContentText("There was an error trying to display the options menu.");
+            alert.showAndWait();
+        }
+    }
+
+    @FXML
+    @SuppressWarnings("unused")
+    private void openChat() {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/dungeon/fxml/Chat.fxml"));
+            Parent chatRoot = loader.load();
+            Scene chatScene = new Scene(chatRoot);
+            Stage chatStage = new Stage();
+            chatStage.setTitle("Game Chat");
+            chatStage.initModality(Modality.APPLICATION_MODAL);
+            chatStage.initOwner(chatButton.getScene().getWindow());
+            chatStage.setScene(chatScene);
+            chatStage.setResizable(false); // Chat window is typically not resizable
+            UIUtils.setStageIcon(chatStage);
+            chatStage.showAndWait();
+        } catch (Exception e) {
+            System.err.println("Error loading Chat.fxml: " + e.getMessage());
+            e.printStackTrace();
+            Alert alert = new Alert(AlertType.ERROR);
+            alert.setTitle("Error");
+            alert.setHeaderText("Could Not Load Chat");
+            alert.setContentText("There was an error trying to display the chat window. Please try again later.");
             alert.showAndWait();
         }
     }

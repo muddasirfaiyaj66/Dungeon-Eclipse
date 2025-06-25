@@ -34,6 +34,7 @@
             <Button fx:id="tutorialButton" text="Tutorial" onAction="#openTutorial" styleClass="menu-button"/>
             <Button fx:id="highScoreButton" text="High Scores" onAction="#openHighScores" styleClass="menu-button"/>
             <Button fx:id="optionsButton" text="Options" onAction="#openOptions" styleClass="menu-button"/>
+            <Button fx:id="chatButton" text="Chat" onAction="#openChat" styleClass="menu-button"/>
             <Button fx:id="exitButton" text="Exit" onAction="#exitGame" styleClass="menu-button"/>
         </VBox>
         

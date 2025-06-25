@@ -188,44 +188,46 @@ public class GameController {
     }
     
     private void createPauseMenu() {
-        pauseMenu = new javafx.scene.layout.VBox(10);
-        pauseMenu.setAlignment(javafx.geometry.Pos.CENTER);
-        pauseMenu.setStyle("-fx-background-color: rgba(0, 0, 0, 0.7); -fx-padding: 20px;");
-        pauseMenu.setPrefWidth(300);
-        pauseMenu.setPrefHeight(200);
-        
-        // Create title
-        javafx.scene.text.Text title = new javafx.scene.text.Text("Paused");
-        title.setFont(javafx.scene.text.Font.font("Verdana", javafx.scene.text.FontWeight.BOLD, 24));
-        title.setFill(javafx.scene.paint.Color.WHITE);
-        
-        // Create buttons
-        javafx.scene.control.Button resumeButton = new javafx.scene.control.Button("Resume Game");
-        resumeButton.setPrefWidth(200);
-        resumeButton.setOnAction(e -> resumeGame());
-        
-        javafx.scene.control.Button optionsButton = new javafx.scene.control.Button("Options");
-        optionsButton.setPrefWidth(200);
-        optionsButton.setOnAction(e -> showOptions());
-        
-        javafx.scene.control.Button exitButton = new javafx.scene.control.Button("Exit to Main Menu");
-        exitButton.setPrefWidth(200);
-        exitButton.setOnAction(e -> exitToMainMenu());
-        
-        // Add components to menu
-        pauseMenu.getChildren().addAll(title, resumeButton, optionsButton, exitButton);
-        
-        
-        
-        // Initially hide the pause menu
-        pauseMenu.setVisible(false);
-        
-        // Add to canvasContainer instead of rootPane
-        canvasContainer.getChildren().add(pauseMenu);
-        
-        // Ensure the menu stays on top
-        StackPane.setAlignment(pauseMenu, Pos.CENTER);
-    }
+    pauseMenu = new javafx.scene.layout.VBox(10);
+    pauseMenu.setAlignment(javafx.geometry.Pos.CENTER);
+    pauseMenu.setStyle("-fx-background-color: rgba(0, 0, 0, 0.7); -fx-padding: 20px;");
+    pauseMenu.setPrefWidth(300);
+    pauseMenu.setPrefHeight(250);
+
+    // Create title
+    javafx.scene.text.Text title = new javafx.scene.text.Text("Paused");
+    title.setFont(javafx.scene.text.Font.font("Verdana", javafx.scene.text.FontWeight.BOLD, 24));
+    title.setFill(javafx.scene.paint.Color.WHITE);
+
+    // Create buttons
+    javafx.scene.control.Button resumeButton = new javafx.scene.control.Button("Resume Game");
+    resumeButton.setPrefWidth(200);
+    resumeButton.setOnAction(e -> resumeGame());
+
+    javafx.scene.control.Button optionsButton = new javafx.scene.control.Button("Options");
+    optionsButton.setPrefWidth(200);
+    optionsButton.setOnAction(e -> showOptions());
+
+    javafx.scene.control.Button chatButton = new javafx.scene.control.Button("Chat");
+    chatButton.setPrefWidth(200);
+    chatButton.setOnAction(e -> showChat());
+
+    javafx.scene.control.Button exitButton = new javafx.scene.control.Button("Exit to Main Menu");
+    exitButton.setPrefWidth(200);
+    exitButton.setOnAction(e -> exitToMainMenu());
+
+    // Add components to menu
+    pauseMenu.getChildren().addAll(title, resumeButton, optionsButton, chatButton, exitButton);
+
+    // Initially hide the pause menu
+    pauseMenu.setVisible(false);
+
+    // Add to canvasContainer instead of rootPane
+    canvasContainer.getChildren().add(pauseMenu);
+
+    // Ensure the menu stays on top
+    StackPane.setAlignment(pauseMenu, Pos.CENTER);
+}
     
     private void togglePauseGame() {
         isPaused = !isPaused;
@@ -319,7 +321,28 @@ public class GameController {
             e.printStackTrace();
         }
     }
-    
+
+   private void showChat() {
+    try {
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/dungeon/fxml/Chat.fxml"));
+        Parent chatRoot = loader.load();
+        Scene chatScene = new Scene(chatRoot);
+        Stage chatStage = new Stage();
+        chatStage.setTitle("Game Chat");
+        chatStage.initModality(Modality.APPLICATION_MODAL);
+        if (gameCanvas != null && gameCanvas.getScene() != null && gameCanvas.getScene().getWindow() != null) {
+            chatStage.initOwner(gameCanvas.getScene().getWindow());
+        }
+        chatStage.setScene(chatScene);
+        chatStage.setResizable(false); // Prevent resizing
+        UIUtils.setStageIcon(chatStage);
+        chatStage.showAndWait();
+    } catch (Exception e) {
+        System.err.println("Error loading Chat.fxml: " + e.getMessage());
+        e.printStackTrace();
+        // Optionally show an error alert to the user here
+    }
+}
     private void exitToMainMenu() {
         System.out.println("Exiting to main menu...");
         soundManager.stopBackgroundMusic();
