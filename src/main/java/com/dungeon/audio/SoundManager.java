@@ -5,6 +5,8 @@ import javafx.scene.media.MediaPlayer;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.prefs.Preferences;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class SoundManager {
     private static SoundManager instance;
@@ -17,6 +19,7 @@ public class SoundManager {
     private double effectsVolume;
 
     private MediaPlayer runningSound;
+    private final ExecutorService soundExecutor;
 
     private static final String PREF_MASTER_VOL = "masterVolume";
     private static final String PREF_MUSIC_VOL = "musicVolume";
@@ -25,6 +28,11 @@ public class SoundManager {
 
     private SoundManager() {
         soundEffects = new HashMap<>();
+        soundExecutor = Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, "SoundThread");
+            t.setDaemon(true); // Allows JVM to exit without waiting for this thread
+            return t;
+        });
         loadSoundSettings();
         loadSounds();
         // Apply initial mute state after sounds are loaded
@@ -121,50 +129,58 @@ public class SoundManager {
     public void playBackgroundMusic() {
         if (isGlobalMuted || backgroundMusic == null) return;
 
-        updateBackgroundMusicVolume();
-        if (backgroundMusic.getStatus() != MediaPlayer.Status.PLAYING) {
-            if (backgroundMusic.getStatus() == MediaPlayer.Status.STOPPED ||
-                backgroundMusic.getStatus() == MediaPlayer.Status.READY ||
-                // If it was paused by mute, then stopped by game, it might be at end
-                backgroundMusic.getCurrentTime().equals(backgroundMusic.getStopTime())) {
-                backgroundMusic.seek(javafx.util.Duration.ZERO);
+        soundExecutor.submit(() -> {
+            System.out.println("playBackgroundMusic running on thread: " + Thread.currentThread().getName());
+            updateBackgroundMusicVolume();
+            if (backgroundMusic.getStatus() != MediaPlayer.Status.PLAYING) {
+                if (backgroundMusic.getStatus() == MediaPlayer.Status.STOPPED ||
+                    backgroundMusic.getStatus() == MediaPlayer.Status.READY ||
+                    // If it was paused by mute, then stopped by game, it might be at end
+                    backgroundMusic.getCurrentTime().equals(backgroundMusic.getStopTime())) {
+                    backgroundMusic.seek(javafx.util.Duration.ZERO);
+                }
+                backgroundMusic.play();
+                System.out.println("Background music playing. Actual volume: " + backgroundMusic.getVolume());
             }
-            backgroundMusic.play();
-            System.out.println("Background music playing. Actual volume: " + backgroundMusic.getVolume());
-        }
+        });
     }
 
     public void stopBackgroundMusic() {
         if (backgroundMusic != null) {
-            backgroundMusic.stop();
+            soundExecutor.submit(backgroundMusic::stop);
             System.out.println("Background music stopped.");
         }
     }
 
     public void playSound(String soundName) {
         if (isGlobalMuted) return;
-        MediaPlayer player = soundEffects.get(soundName);
-        if (player != null) {
-            updateSoundEffectVolume(player);
-            if (soundName.equals("running")) {
-                if (runningSound != null && runningSound.getStatus() != MediaPlayer.Status.PLAYING) {
-                    runningSound.play();
+        soundExecutor.submit(() -> {
+            System.out.println("playSound '" + soundName + "' running on thread: " + Thread.currentThread().getName());
+            MediaPlayer player = soundEffects.get(soundName);
+            if (player != null) {
+                updateSoundEffectVolume(player);
+                if (soundName.equals("running")) {
+                    if (runningSound != null && runningSound.getStatus() != MediaPlayer.Status.PLAYING) {
+                        runningSound.play();
+                    }
+                    return;
                 }
-                return;
+                player.stop();
+                player.seek(javafx.util.Duration.ZERO);
+                player.play();
+            } else {
+                System.err.println("Attempted to play unknown sound: " + soundName);
             }
-            player.stop();
-            player.seek(javafx.util.Duration.ZERO);
-            player.play();
-        } else {
-            System.err.println("Attempted to play unknown sound: " + soundName);
-        }
+        });
     }
 
     public void stopSound(String soundName) {
-        MediaPlayer player = soundEffects.get(soundName);
-        if (player != null) {
-            player.stop();
-        }
+        soundExecutor.submit(() -> {
+            MediaPlayer player = soundEffects.get(soundName);
+            if (player != null) {
+                player.stop();
+            }
+        });
     }
 
     public void setMasterVolume(double volume) {
@@ -241,14 +257,16 @@ public class SoundManager {
 
     public void stopAllSounds() {
         System.out.println("Stopping all sounds via stopAllSounds()");
-        if (backgroundMusic != null) {
-            backgroundMusic.stop();
-        }
-        for (MediaPlayer player : soundEffects.values()) {
-            if (player != null) {
-                player.stop();
+        soundExecutor.submit(() -> {
+            if (backgroundMusic != null) {
+                backgroundMusic.stop();
             }
-        }
+            for (MediaPlayer player : soundEffects.values()) {
+                if (player != null) {
+                    player.stop();
+                }
+            }
+        });
     }
 
     private void saveSoundSettings() {
@@ -271,5 +289,11 @@ public class SoundManager {
         effectsVolume = clampVolume(prefs.getDouble(PREF_EFFECTS_VOL, 0.75));
         isGlobalMuted = prefs.getBoolean(PREF_MUTED, false);
         System.out.println("Loaded sound settings: Master=" + masterVolume + ", Music=" + musicVolume + ", Effects=" + effectsVolume + ", Muted=" + isGlobalMuted);
+    }
+
+    public void shutdown() {
+        System.out.println("Shutting down SoundManager.");
+        stopAllSounds();
+        soundExecutor.shutdownNow();
     }
 }

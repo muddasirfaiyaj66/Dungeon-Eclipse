@@ -4,11 +4,9 @@ import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.image.Image;
 import javafx.stage.Stage;
 import com.dungeon.utils.UIUtils;
 import javafx.animation.FadeTransition;
-import javafx.application.Platform;
 import javafx.util.Duration;
 
 public class Main extends Application {
@@ -75,7 +73,11 @@ public class Main extends Application {
             e.printStackTrace();
         }
     }
-
+    @Override
+    public void stop() throws Exception {
+        com.dungeon.audio.SoundManager.getInstance().shutdown();
+    super.stop();
+}
     public static void main(String[] args) {
         launch(args);
     }
