@@ -111,6 +111,8 @@ public class GameController {
     // Add tracking for puzzle and treasure room clear states
     private boolean puzzleClearedInLevel = false;
     private boolean treasureClearedInLevel = false;
+    private boolean isInventoryOpen = false; // Track if inventory is open
+    private boolean justLeveledUp = false; // Track if player just leveled up
 
     // Room transition constants
     private static final double DOOR_WIDTH = 40;
@@ -128,7 +130,7 @@ public class GameController {
     private SoundManager soundManager;
     
     // Add resize handling
-    private void handleResize() {
+   private void handleResize() {
         if (canvasContainer == null || gameCanvas == null) {
             System.err.println("WARNING: canvasContainer or gameCanvas is null in handleResize");
             return;
@@ -145,6 +147,9 @@ public class GameController {
             if (newVal == null) return;
             
             System.out.println("Canvas width changed: " + oldVal + " -> " + newVal);
+            if (effectsManager != null) {
+                effectsManager.resize(newVal.doubleValue(), gameCanvas.getHeight());
+            }
             
             // Force rendering if player exists and game is not paused
             if (player != null && !isPaused) {
@@ -164,6 +169,9 @@ public class GameController {
             if (newVal == null) return;
             
             System.out.println("Canvas height changed: " + oldVal + " -> " + newVal);
+            if (effectsManager != null) {
+                effectsManager.resize(gameCanvas.getWidth(), newVal.doubleValue());
+            }
             
             // Force rendering if player exists and game is not paused
             if (player != null && !isPaused) {
@@ -548,7 +556,7 @@ public class GameController {
         }
     }
 
-    private void setupInputHandling() {
+   private void setupInputHandling() {
         Scene scene = gameCanvas.getScene();
         activeKeys = new HashSet<>();
         
@@ -568,6 +576,7 @@ public class GameController {
         
         // Handle key presses on the canvas
         gameCanvas.setOnKeyPressed(e -> {
+            if (roomTransitionInProgress || isInventoryOpen) return; // Ignore input during transition or if inventory is open
             System.out.println("Key pressed: " + e.getCode() + " | Canvas focused: " + gameCanvas.isFocused());
             activeKeys.add(e.getCode());
             
@@ -620,6 +629,7 @@ public class GameController {
         });
         
         gameCanvas.setOnKeyReleased(e -> {
+            if (roomTransitionInProgress || isInventoryOpen) return; // Ignore input during transition or if inventory is open
             System.out.println("Key released: " + e.getCode());
             activeKeys.remove(e.getCode());
         });
@@ -645,6 +655,8 @@ public class GameController {
         // Add mouse click handler for shooting and UI interaction
         gameCanvas.setOnMouseClicked(e -> {
             if (player != null) {
+                if (isInventoryOpen) return; // Ignore input when inventory is open
+                if (roomTransitionInProgress) return; // Ignore input during transition
                 // Check if pause button was clicked
                 double buttonSize = 30;
                 double padding = 10;
@@ -707,10 +719,12 @@ public class GameController {
         }
     }
 
-    private void update(double deltaTime) {
+   
+ private void update(double deltaTime) {
         // Debug game state
         System.out.println("UPDATE CALLED | gameLoopRunning=" + gameLoopRunning + 
-                          " | roomTransitionInProgress=" + roomTransitionInProgress);
+                          " | roomTransitionInProgress=" + roomTransitionInProgress +
+                          " | isInventoryOpen=" + isInventoryOpen);
                           
         // Check if player is initialized
         if (player == null) {
@@ -726,8 +740,8 @@ public class GameController {
             return;
         }
         
-        // Skip update if room transition is in progress
-        if (roomTransitionInProgress) {
+        // Skip update if room transition is in progress or inventory is open
+        if (roomTransitionInProgress || isInventoryOpen) {
             return;
         }
         
@@ -767,6 +781,12 @@ public class GameController {
         
         // Check victory condition
         checkVictoryCondition();
+
+        // Check if we need to show the level up message
+        if (justLeveledUp) {
+            showLevelCompletionMessage();
+            justLeveledUp = false;
+        }
         
         // Update effects
         effectsManager.update(deltaTime);
@@ -946,7 +966,6 @@ public class GameController {
                             Door spawnDoor = new Door(doorX, doorY, doorWidth, doorHeight, currentRoom, spawnRoom, Door.DoorDirection.WEST);
                             spawnDoor.setLocked(false);
                             doors.add(spawnDoor);
-                            effectsManager.showFloatingText("Return to spawn room!", new Point2D(doorX + doorWidth/2, doorY - 20), Color.YELLOW);
                             System.out.println("Created spawn door at: " + doorX + "," + doorY);
                         }
                     }
@@ -1117,28 +1136,6 @@ public class GameController {
         
         // Draw UI elements
         renderUI(gc);
-    }
-    
-    private void drawPauseButton(GraphicsContext gc) {
-        // Draw pause button in top-right corner
-        double buttonSize = 30;
-        double padding = 10;
-        double x = gameCanvas.getWidth() - buttonSize - padding;
-        double y = padding;
-        
-        // Draw button background
-        gc.setFill(Color.DARKGRAY);
-        gc.fillRoundRect(x, y, buttonSize, buttonSize, 5, 5);
-        
-        // Draw pause icon
-        gc.setFill(Color.WHITE);
-        gc.fillRect(x + buttonSize * 0.3, y + buttonSize * 0.25, buttonSize * 0.15, buttonSize * 0.5);
-        gc.fillRect(x + buttonSize * 0.55, y + buttonSize * 0.25, buttonSize * 0.15, buttonSize * 0.5);
-        
-        // Draw button border
-        gc.setStroke(Color.WHITE);
-        gc.setLineWidth(1);
-        gc.strokeRoundRect(x, y, buttonSize, buttonSize, 5, 5);
     }
     
     private void drawRoomBackground(GraphicsContext gc) {
@@ -1326,115 +1323,6 @@ public class GameController {
         }
     }
     
-    private void updateLighting() {
-        if (lightingEffect == null) {
-            return;
-        }
-        
-        // Clear previous lights
-        lightingEffect.clearLights();
-        
-        // Set ambient light based on room type
-        switch (currentRoom.getType()) {
-            case COMBAT:
-                lightingEffect.setAmbientLight(0.3); // Dim red lighting
-                break;
-                
-            case PUZZLE:
-                lightingEffect.setAmbientLight(0.4); // Moderate blue lighting
-                break;
-                
-            case TREASURE:
-                lightingEffect.setAmbientLight(0.5); // Brighter gold lighting
-                break;
-                
-            case BOSS:
-                lightingEffect.setAmbientLight(0.2); // Very dark with red tint
-                break;
-                
-            case SPAWN:
-            default:
-                lightingEffect.setAmbientLight(0.6); // Bright natural lighting
-                break;
-        }
-        
-        // Add player light
-        lightingEffect.addLightSource(
-            player.getPosition(), 
-            150, 
-            Color.WHITE, 
-            LightingEffect.LightSource.LightType.FLICKERING
-        );
-        
-        // Add door lights
-        for (Door door : doors) {
-            Color lightColor = door.isLocked() ? Color.RED : Color.GREEN;
-            lightingEffect.addLightSource(
-                new Point2D(door.getX() + door.getWidth()/2, door.getY() + door.getHeight()/2),
-                60,
-                lightColor,
-                LightingEffect.LightSource.LightType.PULSING
-            );
-        }
-        
-        // Add item lights
-        for (Item item : roomItems) {
-            Color itemColor = getItemColor(item.getType());
-            lightingEffect.addLightSource(
-                new Point2D(item.getX(), item.getY()),
-                item.getSize() * 3,
-                itemColor,
-                LightingEffect.LightSource.LightType.PULSING
-            );
-        }
-        
-        // Add enemy lights
-        for (Enemy enemy : enemies) {
-            Color enemyColor = Color.RED;
-            if (enemy.getType() == Enemy.EnemyType.BOSS) {
-                enemyColor = Color.DARKRED;
-            } else if (enemy.getType() == Enemy.EnemyType.MAGE) {
-                enemyColor = Color.BLUE;
-            }
-            
-            lightingEffect.addLightSource(
-                enemy.getPosition(),
-                enemy.getSize() * 2,
-                enemyColor,
-                enemy.getType() == Enemy.EnemyType.BOSS ? 
-                    LightingEffect.LightSource.LightType.PULSING : 
-                    LightingEffect.LightSource.LightType.FLICKERING
-            );
-        }
-        
-        // Add environmental lights based on room type
-        if (currentRoom.getType() == DungeonRoom.RoomType.BOSS) {
-            // Add lava lights for boss room
-            for (int i = 0; i < 5; i++) {
-                double x = random.nextDouble() * gameCanvas.getWidth();
-                double y = random.nextDouble() * gameCanvas.getHeight();
-                lightingEffect.addLightSource(
-                    new Point2D(x, y),
-                    30 + random.nextDouble() * 50,
-                    Color.ORANGE,
-                    LightingEffect.LightSource.LightType.FLICKERING
-                );
-            }
-        } else if (currentRoom.getType() == DungeonRoom.RoomType.PUZZLE) {
-            // Add arcane lights for puzzle room
-            for (int i = 0; i < 4; i++) {
-                double x = 100 + i * (gameCanvas.getWidth() - 200) / 3;
-                double y = gameCanvas.getHeight() / 2;
-                lightingEffect.addLightSource(
-                    new Point2D(x, y),
-                    70,
-                    Color.CYAN,
-                    LightingEffect.LightSource.LightType.PULSING
-                );
-            }
-        }
-    }
-    
     private void renderUI(GraphicsContext gc) {
         // Set font for UI elements
         gc.setFont(Font.font("Verdana", FontWeight.BOLD, 14));
@@ -1543,7 +1431,7 @@ public class GameController {
                 Door bossDoor = new Door(doorX, doorY, doorWidth, doorHeight, currentRoom, bossRoom, Door.DoorDirection.EAST);
                 bossDoor.setLocked(false);
                 doors.add(bossDoor);
-                effectsManager.showFloatingText("Return to spawn room!", new Point2D(doorX + doorWidth/2, doorY - 20), Color.YELLOW);
+                
                 System.out.println("Created boss door in spawn room");
                 return;
             }
@@ -1551,7 +1439,7 @@ public class GameController {
             // If player is returning after clearing 3 rooms, level up and reset
             if (awaitingLevelUp) {
                 awaitingLevelUp = false;
-                showLevelCompletionMessage();
+                justLeveledUp = true; // Set flag to show message after transition
                 
                 // Special condition for level 3 - create boss door instead of regular doors
                 if (currentLevel >= 3) {
@@ -1642,13 +1530,14 @@ public class GameController {
                     spawnDoor.setLocked(false);
                     doors.add(spawnDoor);
                     existingDoorPositions.add(new Point2D(doorX, doorY));
-                    effectsManager.showFloatingText("Return to spawn room!", new Point2D(doorX + doorWidth/2, doorY - 20), Color.YELLOW);
+                    
                     System.out.println("Created spawn door at: " + doorX + "," + doorY);
                 }
             }
         }
         System.out.println("Created " + doors.size() + " doors");
     }
+
 
     private void createDoorsForRoomTypes(List<DungeonRoom.RoomType> roomTypes, double roomWidth, double roomHeight, 
                                        double doorWidth, double doorHeight, List<Point2D> existingDoorPositions) {
@@ -1701,33 +1590,6 @@ public class GameController {
             doors.add(door);
             existingDoorPositions.add(new Point2D(doorX, doorY));
         }
-    }
-
-    private void createDoorToRoom(DungeonRoom targetRoom, double roomWidth, double roomHeight, 
-                                double doorWidth, double doorHeight, List<Point2D> existingDoorPositions) {
-        // Calculate door position based on direction
-        double doorX, doorY;
-        Door.DoorDirection doorDirection;
-        
-        // Position doors on the right side of the room
-        doorX = roomWidth - doorWidth + 50;
-        doorY = (roomHeight / 2) - (doorHeight / 2) + 50;
-        doorDirection = Door.DoorDirection.EAST;
-        
-        // Create the door
-        Door door = new Door(doorX, doorY, doorWidth, doorHeight, currentRoom, targetRoom, doorDirection);
-        
-        // Lock doors based on room type
-        if (currentRoom.getType() == DungeonRoom.RoomType.COMBAT ||
-            currentRoom.getType() == DungeonRoom.RoomType.BOSS) {
-            door.setLocked(!enemies.isEmpty());
-        } else if (currentRoom.getType() == DungeonRoom.RoomType.PUZZLE) {
-            door.setLocked(!puzzleCompleted);
-            door.setRequiresKey(true);
-        }
-        
-        doors.add(door);
-        existingDoorPositions.add(new Point2D(doorX, doorY));
     }
 
     private void populateRoom(DungeonRoom room) {
@@ -1938,36 +1800,6 @@ public class GameController {
         
         roomItems.add(potion);
     }
-
-    private void spawnItems(DungeonRoom room) {
-        if (room.getType() == DungeonRoom.RoomType.TREASURE) {
-            // Get random positions for items
-            Point2D weaponPos = getRandomRoomPosition();
-            Point2D armorPos = getRandomRoomPosition();
-            Point2D potionPos = getRandomRoomPosition();
-        
-            // Spawn one of each item type
-            spawnWeapon(weaponPos);
-            spawnArmor(armorPos);
-            spawnPotion(potionPos);
-        } else if (room.getType() == DungeonRoom.RoomType.PUZZLE) {
-            // Spawn a single random item in puzzle rooms
-            Point2D itemPos = getRandomRoomPosition();
-            int itemType = (int)(Math.random() * 3); // 0: weapon, 1: armor, 2: potion
-            
-            switch (itemType) {
-                case 0:
-                    spawnWeapon(itemPos);
-                break;
-                case 1:
-                    spawnArmor(itemPos);
-                break;
-                case 2:
-                    spawnPotion(itemPos);
-                break;
-            }
-        }
-    }
     
     private void placeKeyInRoom(DungeonRoom room) {
         // Get the center of the room on the canvas
@@ -1989,51 +1821,6 @@ public class GameController {
         roomItems.add(roomKey);
     }
     
-    private void spawnBasicItem(Point2D position) {
-        Random random = new Random();
-        
-        // Randomize item type
-        Item.ItemType type;
-        String name;
-        String description;
-        int value;
-        boolean consumable;
-        
-        double rnd = random.nextDouble();
-        if (rnd < 0.6) {
-            // 60% chance for a potion
-            type = Item.ItemType.POTION;
-            name = "Health Potion";
-            description = "Restores 20 health";
-            value = 20;
-            consumable = true;
-        } else if (rnd < 0.8) {
-            // 20% chance for a weapon
-            type = Item.ItemType.WEAPON;
-            name = "Sword";
-            description = "A sharp weapon";
-            value = 15;
-            consumable = false;
-        } else {
-            // 20% chance for treasure
-            type = Item.ItemType.TREASURE;
-            name = "Gold Coins";
-            description = "Valuable treasure";
-            value = 50;
-            consumable = true;
-        }
-        
-        // Create the item
-        Item item = new Item(name, description, type, value, consumable);
-        item.setX(position.getX());
-        item.setY(position.getY());
-        item.setSize(20);
-        
-        System.out.println("Added item: " + name + " at " + position.getX() + "," + position.getY());
-        
-        roomItems.add(item);
-    }
-    
     private void spawnEnemy(DungeonRoom room) {
         Random random = new Random();
         Point2D roomPos = new Point2D(room.getX(), room.getY());
@@ -2047,14 +1834,6 @@ public class GameController {
         enemies.add(new Enemy(spawnPos.getX(), spawnPos.getY(), type));
     }
 
-    private boolean isColliding(Entity entity1, Entity entity2) {
-        Point2D center1 = entity1.getPosition().add(entity1.getSize() / 2, entity1.getSize() / 2);
-        Point2D center2 = entity2.getPosition().add(entity2.getSize() / 2, entity2.getSize() / 2);
-        double distance = center1.distance(center2);
-        double combinedRadius = (entity1.getSize() + entity2.getSize()) / 2;
-        return distance < combinedRadius;
-    }
-
     private boolean isInMeleeRange(Entity attacker, Entity target) {
         double attackRange = 40; // Melee attack range
         
@@ -2063,73 +1842,6 @@ public class GameController {
         
         return attackerCenter.distance(targetCenter) < (attacker.getSize() / 2 + target.getSize() / 2 + attackRange);
     }
-
-    private void showFloatingText(String text, Point2D position) {
-        // This would be implemented with a UI element that floats up and fades out
-        // For now, we'll just print to console
-        System.out.println("Floating text at " + position + ": " + text);
-    }
-
-    private void dropRandomItem(Point2D position) {
-        Random random = new Random();
-        if (random.nextDouble() < 0.3) { // 30% chance to drop an item
-            Item.ItemType type = Item.ItemType.values()[random.nextInt(Item.ItemType.values().length)];
-            String name;
-            String description;
-            int value;
-            boolean consumable;
-            
-            switch (type) {
-                case WEAPON:
-                    name = "Sword";
-                    description = "A sharp blade";
-                    value = 10;
-                    consumable = false;
-                    break;
-                case POTION:
-                    name = "Health Potion";
-                    description = "Restores 20 HP";
-                    value = 20;
-                    consumable = true;
-                    break;
-                case ARMOR:
-                    name = "Shield";
-                    description = "Provides protection";
-                    value = 15;
-                    consumable = false;
-                    break;
-                default:
-                    name = "Gold Coins";
-                    description = "Valuable treasure";
-                    value = 50;
-                    consumable = true;
-                    type = Item.ItemType.TREASURE;
-                    break;
-            }
-            
-            // Create and add the item
-            Item item = new Item(name, description, type, value, consumable);
-            item.setX(position.getX());
-            item.setY(position.getY());
-            item.setSize(20);
-            roomItems.add(item);
-        }
-    }
-
-    private boolean isPlayerTouchingItem(Item item) {
-        double playerCenterX = player.getPosition().getX() + player.getSize() / 2;
-        double playerCenterY = player.getPosition().getY() + player.getSize() / 2;
-        double itemCenterX = item.getX() + 5; // Assuming item size is 10x10
-        double itemCenterY = item.getY() + 5;
-        
-        double distance = Math.sqrt(
-            Math.pow(playerCenterX - itemCenterX, 2) + 
-            Math.pow(playerCenterY - itemCenterY, 2)
-        );
-        
-        return distance < (player.getSize() / 2 + 5); // Player radius + item radius
-    }
-
     private void checkRoomTransition() {
         // Check if player is at a door to a connected room
         for (Door door : doors) {
@@ -2192,90 +1904,55 @@ public class GameController {
     }
 
     private void transitionToRoom(DungeonRoom newRoom, Point2D entryPosition) {
-        if (newRoom == null) return;
+        if (newRoom == null || roomTransitionInProgress) return;
+
+        soundManager.stopSound("running");
+        activeKeys.clear(); // Clear any "stuck" keys
+        roomTransitionInProgress = true;
         
         // Play transition sound
         soundManager.playSound("teleport");
         
         // Start room transition effect
-        effectsManager.startRoomTransition(newRoom.getType(), () -> {
-            // This runs after the transition effect completes
-            currentRoom = newRoom;
-            currentRoom.setVisited(true);
-            
-            // Set player position
-            player.setPosition(entryPosition.getX(), entryPosition.getY());
-            
-            // Clear existing room data
-            enemies.clear();
-            projectiles.clear();
-            roomItems.clear();
-            doors.clear();
-            
-            // Reset room cleared state
-            roomCleared = false;
-            
-            // Populate new room
-            populateRoom(currentRoom);
-            
-            // Create doors for the new room
-            createDoors();
-            
-            // Update minimap
-            updateMinimap();
-            
-            // Force a render to ensure all text positions are updated
-            render();
-            
-            // Ensure canvas has focus
-            gameCanvas.requestFocus();
-        });
-    }
-    
-    private void handleDoorInteraction() {
-        for (Door door : doors) {
-            if (door.contains(new Point2D(player.getX(), player.getY()))) {
-                // Check if door is locked
-                if (door.isLocked()) {
-                    if (door.requiresKey()) {
-                        // Try to unlock door with key
-                        if (door.unlock(player.getInventory())) {
-                            // Show unlock effect
-                            effectsManager.showFloatingText("Door Unlocked!", 
-                                new Point2D(door.getX() + door.getWidth() / 2, door.getY() - 10),
-                                Color.YELLOW, 20);
-                            
-                            // Add particles for unlocking effect
-                            for (int i = 0; i < 15; i++) {
-                                effectsManager.addParticle(
-                                    new Point2D(door.getX() + door.getWidth() / 2, door.getY() + door.getHeight() / 2),
-                                    Color.YELLOW,
-                                    1.0
-                                );
-                            }
-                        } else {
-                            // Show message that key is required
-                            effectsManager.showFloatingText("Key Required!", 
-                                new Point2D(door.getX() + door.getWidth() / 2, door.getY() - 10),
-                                Color.RED, 20);
-                        }
-                    } else {
-                        // Show message about room not being cleared
-                        effectsManager.showFloatingText("Clear the room first!", 
-                            new Point2D(door.getX() + door.getWidth() / 2, door.getY() - 10),
-                            Color.RED, 20);
-                    }
-                } else {
-                    // Door is unlocked, transition to connected room
-                    DungeonRoom connectedRoom = door.getConnectedRoom();
-                    Point2D entryPosition = getEntryPosition(door);
-                    transitionToRoom(connectedRoom, entryPosition);
-                }
-                break; // Only interact with one door at a time
+        effectsManager.startRoomTransition(newRoom.getType(), 
+            () -> {
+                // This runs after the fade-in (screen is black)
+                currentRoom = newRoom;
+                currentRoom.setVisited(true);
+                
+                // Set player position
+                player.setPosition(entryPosition.getX(), entryPosition.getY());
+                
+                // Clear existing room data
+                enemies.clear();
+                projectiles.clear();
+                roomItems.clear();
+                doors.clear();
+                
+                // Reset room cleared state
+                roomCleared = false;
+                
+                // Populate new room
+                populateRoom(currentRoom);
+                
+                // Create doors for the new room
+                createDoors();
+                
+                // Update minimap
+                updateMinimap();
+                
+                // Force a render to ensure all text positions are updated
+                render();
+                
+                // Ensure canvas has focus
+                gameCanvas.requestFocus();
+            },
+            () -> {
+                // This runs after the fade-out is complete
+                roomTransitionInProgress = false;
             }
-        }
+        );
     }
-    
     private Point2D getEntryPosition(Door door) {
         // Calculate entry position based on door location
         double entryX, entryY;
@@ -2792,8 +2469,13 @@ private void updateMinimap() {
     }
 
 public void openInventory() {
+        if (isInventoryOpen) return; // Prevent opening multiple inventories
+
+        isInventoryOpen = true;
+        soundManager.stopSound("running");
+        activeKeys.clear();
+
         try {
-            // Load the inventory FXML
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/dungeon/fxml/Inventory.fxml"));
             Parent inventoryRoot = loader.load();
             
@@ -2807,40 +2489,23 @@ public void openInventory() {
             UIUtils.setStageIcon(inventoryStage); // Set the icon here
             inventoryStage.setTitle("Inventory");
             inventoryStage.initModality(Modality.APPLICATION_MODAL);
-            inventoryStage.initStyle(StageStyle.UNDECORATED);
-            
-            // Set the owner of the new stage to the main game's stage
-            if (gameCanvas != null && gameCanvas.getScene() != null && gameCanvas.getScene().getWindow() != null) {
-                inventoryStage.initOwner(gameCanvas.getScene().getWindow());
-            } else {
-                System.err.println("Warning: Could not set owner for inventory stage, gameCanvas or its window is null.");
-            }
-            
+            inventoryStage.initOwner(gameCanvas.getScene().getWindow());
             inventoryStage.setScene(new Scene(inventoryRoot));
+            inventoryStage.setResizable(false);
             
-            // Center the window (relative to owner if set, otherwise screen)
-            inventoryStage.centerOnScreen();
-            
-            // Show the inventory
-            inventoryStage.show();
-            
-            // Pause the game while inventory is open
-            isPaused = true;
-            gameLoopRunning = false;
-            
-            // Add listener for when inventory is closed
-            inventoryStage.setOnHidden(e -> {
-                isPaused = false;
-                gameLoopRunning = true;
-                startGameLoop();
-                gameCanvas.requestFocus();
-            });
-            
+            // Set icon for the inventory window
+            UIUtils.setStageIcon(inventoryStage);
+
+            // This call will block until the inventory window is closed
+            inventoryStage.showAndWait();
+
         } catch (Exception e) {
-            System.err.println("Error opening inventory: " + e.getMessage());
             e.printStackTrace();
+        } finally {
+            // This will run after the inventory window is closed
+            isInventoryOpen = false;
         }
-}
+    }
 
 public void interactWithPuzzle() {
         // Only interact if we're in a puzzle room
@@ -3487,19 +3152,19 @@ public void onPuzzleSolved(DungeonRoom room) {
         }
     }
 
-    private void showLevelCompletionMessage() {
+   
+ private void showLevelCompletionMessage() {
         // Show a floating text in the center of the canvas
         if (gameCanvas != null && effectsManager != null) {
             effectsManager.showFloatingText(
-                "Level Complete! Return to the spawn room!",
-                new javafx.geometry.Point2D(gameCanvas.getWidth() / 2, gameCanvas.getHeight() / 2),
+                "Level Complete!",
+                new javafx.geometry.Point2D(gameCanvas.getWidth() / 2, 50), // Position at top-middle
                 javafx.scene.paint.Color.GOLD
             );
         } else {
-            System.out.println("Level Complete! Return to the spawn room!");
+            System.out.println("Level Complete!");
         }
     }
-
     private void handleRoomTransition(DungeonRoom newRoom) {
         soundManager.playSound("teleport");
         // ... existing code ...
