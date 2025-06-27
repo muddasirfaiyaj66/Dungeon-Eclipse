@@ -64,6 +64,8 @@ public class SoundManager {
         loadSoundEffect("character", "game-character-140506.mp3");
         loadSoundEffect("start", "game-start-317318.mp3");
         loadSoundEffect("gameOver", "game-over-160612.mp3");
+        loadSoundEffect("victory", "victory.mp3");
+        loadSoundEffect("damage", "damage.mp3");
         // Add new sounds here if needed, for example:
         // loadSoundEffect("puzzle_solved", "level-passed-86288.mp3");
 
@@ -165,11 +167,51 @@ public class SoundManager {
                     }
                     return;
                 }
+                // --- Fix for rapid-fire sounds like 'damage' ---
+                if (soundName.equals("damage")) {
+                    // Create a new MediaPlayer for each play
+                    String path = getClass().getResource("/com/dungeon/assets/sounds/damage.mp3").toExternalForm();
+                    Media media = new Media(path);
+                    MediaPlayer tempPlayer = new MediaPlayer(media);
+                    updateSoundEffectVolume(tempPlayer);
+                    tempPlayer.setOnEndOfMedia(tempPlayer::dispose);
+                    tempPlayer.play();
+                    return;
+                }
+                // --- End fix ---
                 player.stop();
                 player.seek(javafx.util.Duration.ZERO);
                 player.play();
             } else {
                 System.err.println("Attempted to play unknown sound: " + soundName);
+            }
+        });
+    }
+
+    public void playVictoryMusic() {
+        if (isGlobalMuted) return;
+        soundExecutor.submit(() -> {
+            System.out.println("Playing victory music on thread: " + Thread.currentThread().getName());
+            MediaPlayer victoryPlayer = soundEffects.get("victory");
+            if (victoryPlayer != null) {
+                // Stop background music first
+                if (backgroundMusic != null) {
+                    backgroundMusic.stop();
+                }
+                
+                // Set victory music volume using music volume setting
+                if (isGlobalMuted) {
+                    victoryPlayer.setVolume(0);
+                } else {
+                    victoryPlayer.setVolume(clampVolume(masterVolume * musicVolume));
+                }
+                
+                victoryPlayer.stop();
+                victoryPlayer.seek(javafx.util.Duration.ZERO);
+                victoryPlayer.play();
+                System.out.println("Victory music playing. Volume: " + victoryPlayer.getVolume());
+            } else {
+                System.err.println("Victory music not found!");
             }
         });
     }

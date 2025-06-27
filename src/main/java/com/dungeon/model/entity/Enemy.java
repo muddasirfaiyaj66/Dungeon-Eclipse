@@ -30,6 +30,7 @@ public class Enemy extends Entity {
     private double scoreValue;
     private boolean aggravated = false;
     private int expValue;
+    private boolean wasHit = false;
     
     // Enemy types with different stats
     public enum EnemyType {
@@ -163,10 +164,10 @@ public class Enemy extends Entity {
     
     public void update(double deltaTime) {
         if (!isAlive()) return;
-        
+        // Reset wasHit at the start of each update
+        wasHit = false;
         // Update position based on current velocity
         super.update(deltaTime);
-        
         // Update attack cooldown
         if (attackCooldown > 0) {
             attackCooldown -= deltaTime;
@@ -489,5 +490,19 @@ public class Enemy extends Entity {
     
     public void setAggravated(boolean aggravated) {
         this.aggravated = aggravated;
+    }
+    
+    public boolean wasHit() {
+        return wasHit;
+    }
+    
+    public void setWasHit(boolean hit) {
+        this.wasHit = hit;
+    }
+    
+    @Override
+    public void takeDamage(double damage) {
+        super.takeDamage(damage);
+        wasHit = true;
     }
 }

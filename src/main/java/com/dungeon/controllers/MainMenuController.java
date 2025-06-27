@@ -14,6 +14,9 @@ import javafx.scene.control.Button;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Duration;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.StackPane;
 
 public class MainMenuController {
     
@@ -34,6 +37,9 @@ public class MainMenuController {
     
     @FXML
     private Button chatButton;
+    
+    @FXML
+    private StackPane mainMenuRoot;
     
     @FXML
     @SuppressWarnings("unused")
@@ -237,5 +243,21 @@ public class MainMenuController {
     @SuppressWarnings("unused")
     private void exitGame() {
         Platform.exit();
+    }
+
+    @FXML
+    public void initialize() {
+        // Set the background image for the main menu
+        Image bgImage = new Image(getClass().getResourceAsStream("/com/dungeon/assets/images/mainmenu.jpeg"));
+        ImageView bgView = new ImageView(bgImage);
+        bgView.setPreserveRatio(false);
+        bgView.setFitWidth(mainMenuRoot.getWidth());
+        bgView.setFitHeight(mainMenuRoot.getHeight());
+        bgView.fitWidthProperty().bind(mainMenuRoot.widthProperty());
+        bgView.fitHeightProperty().bind(mainMenuRoot.heightProperty());
+        bgView.setSmooth(true);
+        bgView.setCache(true);
+        // Add the background image as the first child
+        mainMenuRoot.getChildren().add(0, bgView);
     }
 }

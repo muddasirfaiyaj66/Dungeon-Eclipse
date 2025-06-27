@@ -11,6 +11,12 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.ListCell;
 import javafx.stage.Stage;
 import java.util.List;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
+import javafx.scene.control.Label;
+import javafx.geometry.Pos;
 
 public class InventoryController {
     @FXML
@@ -30,13 +36,52 @@ public class InventoryController {
     @SuppressWarnings("unused")
     public void initialize() {
         itemListView.setCellFactory(param -> new ListCell<>() {
+            private ImageView imageView = new ImageView();
+            private Label nameLabel = new Label();
+            private Label statsLabel = new Label();
+            private VBox textVBox = new VBox(nameLabel, statsLabel);
+            private HBox contentHBox = new HBox(10, imageView, textVBox);
+            
+            {
+                contentHBox.setAlignment(Pos.CENTER_LEFT);
+                imageView.setFitWidth(32);
+                imageView.setFitHeight(32);
+                nameLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: black;");
+                statsLabel.setStyle("-fx-font-style: italic; -fx-text-fill: #333333;");
+            }
             @Override
             protected void updateItem(Item item, boolean empty) {
                 super.updateItem(item, empty);
                 if (empty || item == null) {
                     setText(null);
+                    setGraphic(null);
                 } else {
-                    setText(item.getName() + " (" + item.getType() + ")");
+                    // Set item image
+                    Image img = getItemImage(item);
+                    imageView.setImage(img);
+                    
+                    // Set item name
+                    nameLabel.setText(item.getName());
+                    
+                    // Set item stats
+                    String stats = "";
+                    if (item instanceof Weapon) {
+                        Weapon weapon = (Weapon) item;
+                        double weaponDamage = weapon.getDamage();
+                        stats = "Damage: " + String.format("%.0f", weaponDamage);
+                        if (weapon.isPuzzleReward()) {
+                            stats += " (Puzzle Reward: Half Damage)";
+                        }
+                    } else if (item instanceof Armor) {
+                        double reduction = ((Armor) item).getActualReduction() * 100;
+                        stats = "Resistance: " + String.format("%.0f%%", reduction);
+                        if (((Armor) item).isPuzzleReward()) {
+                            stats += " (Puzzle Reward: Half Resistance)";
+                        }
+                    }
+                    statsLabel.setText(stats);
+                    
+                    setGraphic(contentHBox);
                 }
             }
         });
@@ -150,8 +195,9 @@ public class InventoryController {
                 droppedItem = new Weapon(
                     weaponToDrop.getName(),
                     weaponToDrop.getDescription(),
-                    weaponToDrop.getBaseDamage(),
-                    weaponToDrop.getWeaponType()
+                    weaponToDrop.getOriginalBaseDamage(),
+                    weaponToDrop.getWeaponType(),
+                    weaponToDrop.isPuzzleReward()
                 );
                  // Unequip the item if it's a weapon or armor
                 Weapon currentWeapon = player.getEquippedWeapon();
@@ -164,9 +210,9 @@ public class InventoryController {
                 droppedItem = new Armor(
                     armorToDrop.getName(),
                     armorToDrop.getDescription(),
-                    armorToDrop.getArmorType()
+                    armorToDrop.getArmorType(),
+                    armorToDrop.isPuzzleReward()
                 );
-                // Unequip the item if it's a weapon or armor
                 Armor currentArmor = player.getEquippedArmor();
                 if (currentArmor != null && currentArmor.equals(selectedItem)) {
                     player.setEquippedArmor(null);
@@ -199,5 +245,33 @@ public class InventoryController {
     private void closeInventory() {
         Stage stage = (Stage) closeButton.getScene().getWindow();
         stage.close();
+    }
+
+    private Image getItemImage(Item item) {
+        String path = null;
+        switch (item.getType()) {
+            case POTION:
+                path = "/com/dungeon/assets/images/potion.png";
+                break;
+            case ARMOR:
+                path = "/com/dungeon/assets/images/armor.png";
+                break;
+            case KEY:
+                path = "/com/dungeon/assets/images/key.png";
+                break;
+            case WEAPON:
+                if (item instanceof Weapon) {
+                    path = ((Weapon) item).getWeaponType().getImagePath();
+                }
+                break;
+        }
+        if (path != null) {
+            try {
+                return new Image(getClass().getResourceAsStream(path));
+            } catch (Exception e) {
+                System.err.println("Could not load image: " + path);
+            }
+        }
+        return null; // Return null if no image path is found
     }
 }
