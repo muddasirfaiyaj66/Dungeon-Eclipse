@@ -1,0 +1,119 @@
+[
+  {
+    "type": "MATH",
+    "difficulty": "EXTREME",
+    "description": "Solve the system of equations.",
+    "question": "Find x and y: 3x + 2y = 16 and 5x - y = 9",
+    "answer": "x=3, y=2",
+    "hint": "Use substitution or elimination method to solve the system.",
+    "solved": false
+  },
+  {
+    "type": "LOGIC",
+    "difficulty": "EXTREME",
+    "description": "Hard truth-teller/liar puzzle.",
+    "question": "You meet three people: one always tells the truth, one always lies, and one alternates truth and lies. You can ask one yes/no question to identify the truth-teller. What do you ask?",
+    "answer": "Is the person to your left the liar?",
+    "hint": "Use a question that exposes the pattern of answers over time or involves another person's behavior.",
+    "solved": false
+  },
+  {
+    "type": "MATH",
+    "difficulty": "EXTREME",
+    "description": "Complex number problem.",
+    "question": "What is the value of i^i? (where i is the imaginary unit)",
+    "answer": "e^(-π/2)",
+    "hint": "Use Euler’s formula and properties of complex exponentiation.",
+    "solved": false
+  },
+  {
+    "type": "RIDDLE",
+    "difficulty": "HARD",
+    "description": "Riddle involving paradox.",
+    "question": "I speak without a mouth and hear without ears. I have nobody, but I come alive with the wind. What am I?",
+    "answer": "echo",
+    "hint": "Think about sounds reflecting.",
+    "solved": false
+  },
+  {
+    "type": "LOGIC",
+    "difficulty": "EXTREME",
+    "description": "Advanced river crossing puzzle.",
+    "question": "A farmer needs to get a wolf, goat, and cabbage across a river in a boat that can carry only himself and one item. If left alone, the wolf eats the goat, and the goat eats the cabbage. How can he do it?",
+    "answer": "Take goat over, return alone; take wolf over, bring goat back; take cabbage over, return alone; take goat over.",
+    "hint": "Think step by step, moving items to avoid predation.",
+    "solved": false
+  },
+  {
+    "type": "MATH",
+    "difficulty": "EXTREME",
+    "description": "Calculate the integral.",
+    "question": "Evaluate ∫ from 0 to 1 of (x^3 * e^x) dx.",
+    "answer": "e - 4",
+    "hint": "Use integration by parts multiple times.",
+    "solved": false
+  },
+  {
+    "type": "WORD",
+    "difficulty": "HARD",
+    "description": "Anagram riddle.",
+    "question": "Rearrange the letters 'LISTEN' to form another word.",
+    "answer": "silent",
+    "hint": "The answer is a word meaning quiet.",
+    "solved": false
+  },
+  {
+    "type": "LOGIC",
+    "difficulty": "EXTREME",
+    "description": "Prisoners and hats puzzle.",
+    "question": "100 prisoners stand in a line, each wearing a red or blue hat. Each must guess their own hat color without seeing it but hearing previous guesses. How do they maximize correct guesses?",
+    "answer": "Use parity strategy to encode information in guesses.",
+    "hint": "Think about binary parity and communication through guesses.",
+    "solved": false
+  },
+  {
+    "type": "MATH",
+    "difficulty": "HARD",
+    "description": "Prime number puzzle.",
+    "question": "What is the 10th prime number?",
+    "answer": "29",
+    "hint": "Count primes starting from 2 upwards.",
+    "solved": false
+  },
+  {
+    "type": "RIDDLE",
+    "difficulty": "EXTREME",
+    "description": "Paradoxical riddle.",
+    "question": "This statement is false. Is it true or false?",
+    "answer": "Paradox — no definitive answer.",
+    "hint": "It's a classic paradox with no resolution.",
+    "solved": false
+  },
+  {
+    "type": "MATH",
+    "difficulty": "EXTREME",
+    "description": "Solve for x.",
+    "question": "If log(x) + log(x-3) = 1, find x.",
+    "answer": "5",
+    "hint": "Use log rules to combine and solve quadratic equation.",
+    "solved": false
+  },
+  {
+    "type": "LOGIC",
+    "difficulty": "HARD",
+    "description": "Hard coin weighing puzzle.",
+    "question": "You have 12 coins, one is fake and weighs differently. Using a balance scale only three times, find the fake coin.",
+    "answer": "Divide coins into groups and weigh strategically.",
+    "hint": "Use divide and conquer to isolate the fake coin stepwise.",
+    "solved": false
+  },
+  {
+    "type": "WORD",
+    "difficulty": "EXTREME",
+    "description": "Palindromic phrase.",
+    "question": "What 7-letter word is the same forwards and backwards and relates to a race?",
+    "answer": "racecar",
+    "hint": "It's a type of fast car.",
+    "solved": false
+  }
+]

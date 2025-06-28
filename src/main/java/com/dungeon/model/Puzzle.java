@@ -1,10 +1,10 @@
 package com.dungeon.model;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
-import java.util.ArrayList;
 
 /**
  * Represents a puzzle that can be solved by the player

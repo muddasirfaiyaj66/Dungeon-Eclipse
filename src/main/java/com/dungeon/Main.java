@@ -1,12 +1,13 @@
 package com.dungeon;
 
+import com.dungeon.utils.UIUtils;
+
+import javafx.animation.FadeTransition;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
-import com.dungeon.utils.UIUtils;
-import javafx.animation.FadeTransition;
 import javafx.util.Duration;
 
 public class Main extends Application {
