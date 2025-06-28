@@ -157,7 +157,6 @@ public class SoundManager {
     public void playSound(String soundName) {
         if (isGlobalMuted) return;
         soundExecutor.submit(() -> {
-            System.out.println("playSound '" + soundName + "' running on thread: " + Thread.currentThread().getName());
             MediaPlayer player = soundEffects.get(soundName);
             if (player != null) {
                 updateSoundEffectVolume(player);
