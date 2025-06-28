@@ -10,6 +10,7 @@ import java.util.Random;
 import java.util.Set;
 import java.io.IOException; 
 
+
 import com.dungeon.audio.SoundManager;
 import com.dungeon.effects.EffectsManager;
 import com.dungeon.model.Door;
@@ -86,13 +87,15 @@ public class GameController {
     private boolean roomTransitionInProgress;
     private double mouseX, mouseY;
     private Random random;
+    private Map<DungeonRoom, Puzzle> puzzles = new HashMap<>();
+private List<Puzzle> allPuzzles;
     private EffectsManager effectsManager;
     private LightingEffect lightingEffect;
     private List<String> floatingTexts; // For displaying damage, pickups, etc.
     private List<ProjectileAttack> playerProjectiles;
     private List<EnemyAbility.Projectile> enemyProjectiles;
     private List<Item> roomItems; // Items in the current room
-    private java.util.Map<DungeonRoom, Puzzle> puzzles; // Puzzles for puzzle rooms
+    // private java.util.Map<DungeonRoom, Puzzle> puzzles; // Puzzles for puzzle rooms
     private List<Door> doors; // Doors in the current room
     private double timeSinceLastSpawn;
     private boolean bossDefeated;
@@ -582,14 +585,21 @@ private boolean backgroundsLoaded = false;
         }
     }
 
-    private void generatePuzzles() {
-        for (DungeonRoom room : currentDungeon) {
-            if (room.getType() == DungeonRoom.RoomType.PUZZLE) {
-                // Create a random puzzle for each puzzle room
-                puzzles.put(room, Puzzle.createRandomPuzzle());
+   
+private void generatePuzzles() {
+    allPuzzles = Puzzle.loadPuzzlesFromResources();
+    Iterator<Puzzle> puzzleIterator = allPuzzles.iterator();
+
+    for (DungeonRoom room : currentDungeon) {
+        if (room.getType() == DungeonRoom.RoomType.PUZZLE) {
+            if (!puzzleIterator.hasNext()) {
+                // Restart iterator if run out of puzzles
+                puzzleIterator = allPuzzles.iterator();
             }
+            puzzles.put(room, puzzleIterator.next());
         }
     }
+}
 
    private void setupInputHandling() {
         Scene scene = gameCanvas.getScene();

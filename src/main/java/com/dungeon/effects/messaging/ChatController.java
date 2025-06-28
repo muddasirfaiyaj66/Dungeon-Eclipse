@@ -1,15 +1,14 @@
 package com.dungeon.effects.messaging;
 
+import java.util.List;
+
 import com.dungeon.model.Puzzle;
-import com.dungeon.utils.PuzzleLoader;
 
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
-
-import java.util.List;
 
 public class ChatController {
 
@@ -22,7 +21,8 @@ public class ChatController {
 
     @FXML
     public void initialize() {
-        allPuzzles = PuzzleLoader.loadPuzzlesFromJson("/puzzles.json");
+        // Load puzzles from resources/puzzles.json
+        allPuzzles = Puzzle.loadPuzzlesFromResources();
 
         chatHistory.setCellFactory(lv -> {
             ListCell<String> cell = new ListCell<>() {
