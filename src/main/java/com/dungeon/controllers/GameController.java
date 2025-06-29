@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.io.IOException; 
-
+import java.util.Collections;
 
 import com.dungeon.audio.SoundManager;
 import com.dungeon.effects.EffectsManager;
@@ -44,6 +44,7 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextArea;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -129,6 +130,25 @@ private List<Puzzle> allPuzzles;
     private static final double ATTACK_COOLDOWN = 2.0; // 2 seconds cooldown
     private static final double BOUNCE_DISTANCE = 100.0; // Distance to bounce back
     
+    // Statue-related fields
+    private boolean statueVisible = false;
+    private Point2D statuePosition;
+    private static final double STATUE_SIZE = 200.0;
+    private static final double STATUE_INTERACTION_RANGE = 250.0;
+    
+    // Torch and treasure room fields
+    private boolean torchActive = false;
+    private Image torchImage;
+    private static final double TORCH_LIGHT_RADIUS = 150.0;
+    private static final double TORCH_SIZE = 40.0;
+    private List<Point2D> spikePositions = new ArrayList<>();
+    private List<Point2D> safePositions = new ArrayList<>();
+    private int equipmentCollected = 0;
+    private int totalEquipmentInRoom = 0;
+    private boolean treasureRoomLighted = false;
+    private static final double SPIKE_DAMAGE = 5.0;
+    private static final double SPIKE_SIZE = 20.0;
+    
     private Map<Enemy.EnemyType, javafx.scene.image.Image> enemyImages = new HashMap<>();
     private Map<Weapon.WeaponType, javafx.scene.image.Image> weaponImages = new HashMap<>();
     private GraphicsContext gc;
@@ -154,6 +174,7 @@ private List<Puzzle> allPuzzles;
    private Image puzzleBgImage;
    private Image spawnBgImage;
    private Image bossBgImage;
+   private Image statueImage;
 private boolean backgroundsLoaded = false;
     private WeatherSystem weatherSystem;
     // Add resize handling
@@ -622,31 +643,31 @@ private void generatePuzzles() {
         // Handle key presses on the canvas
         gameCanvas.setOnKeyPressed(e -> {
             if (roomTransitionInProgress || isInventoryOpen) return; // Ignore input during transition or if inventory is open
-            // System.out.println("Key pressed: " + e.getCode() + " | Canvas focused: " + gameCanvas.isFocused());
-            activeKeys.add(e.getCode());
+            
+            KeyCode code = e.getCode();
+            activeKeys.add(code);
+            
+            // Handle torch toggle
+            if (code == KeyCode.V) {
+                toggleTorch();
+            }
             
             // Handle inventory key
-            if (e.getCode() == KeyCode.I) {
-                // System.out.println("I key pressed - Opening inventory");
+            if (code == KeyCode.I) {
                 openInventory();
-            } else if (e.getCode() == KeyCode.F) {  
-                // System.out.println("F key pressed - Current room type: " + 
-                //     (currentRoom != null ? currentRoom.getType() : "null"));
-                
+            } else if (code == KeyCode.F) {  
                 // Interact with puzzle or door
                 if (currentRoom != null && currentRoom.getType() == DungeonRoom.RoomType.PUZZLE) {
-                    // System.out.println("F key pressed in puzzle room - attempting to interact with puzzle");
-                    // System.out.println("Puzzle exists: " + (puzzles.get(currentRoom) != null));
                     interactWithPuzzle();
                 } else {
                     // Try to interact with doors
                     checkDoorInteraction();
                 }
-            } else if (e.getCode() == KeyCode.ESCAPE) {
+            } else if (code == KeyCode.ESCAPE) {
                 // Toggle pause menu
                 togglePauseGame();
                 e.consume(); // Consume the event to prevent default JavaFX full-screen exit
-            } else if (e.getCode() == KeyCode.W && activeKeys.contains(KeyCode.CONTROL)) {
+            } else if (code == KeyCode.W && activeKeys.contains(KeyCode.CONTROL)) {
                 // Ctrl+W to change weather manually
                 if (weatherSystem != null) {
                     WeatherSystem.WeatherType[] weathers = WeatherSystem.WeatherType.values();
@@ -666,26 +687,24 @@ private void generatePuzzles() {
             }
             
             // Handle projectile attack with E key
-            if (e.getCode() == KeyCode.E) {
+            if (code == KeyCode.E) {
                 firePlayerProjectile();
             }
             
             // Handle melee attack with Space key
-            if (e.getCode() == KeyCode.SPACE) {
-                // Implement melee attack
+            if (code == KeyCode.SPACE) {
                 attackEnemiesInRange();
             }
             
             // Handle weapon selection with number keys
-            if (e.getCode().isDigitKey()) {
+            if (code.isDigitKey()) {
                 try {
-                    int weaponIndex = Integer.parseInt(e.getCode().getName()) - 1;
+                    int weaponIndex = Integer.parseInt(code.getName()) - 1;
                     if (weaponIndex >= 0 && weaponIndex < 4) {
-                        // System.out.println("Digit key pressed: " + e.getCode().getName() + ", weapon index: " + weaponIndex);
                         selectWeapon(weaponIndex);
                     }
                 } catch (NumberFormatException ex) {
-                    // System.out.println("Error parsing digit: " + ex.getMessage());
+                    // Ignore parsing errors
                 }
             }
         });
@@ -852,6 +871,12 @@ private void generatePuzzles() {
             justLeveledUp = false;
         }
         
+        // Check statue interaction in puzzle room
+        checkStatueInteraction();
+        
+        // Check spike collision in treasure room
+        checkSpikeCollision();
+        
         // Update effects
         effectsManager.update(deltaTime);
     }
@@ -923,6 +948,26 @@ private void generatePuzzles() {
                 // Remove item from room
                 itemIterator.remove();
                 itemsPickedUp = true;
+                
+                // Track equipment collection in treasure room
+                if (currentRoom != null && currentRoom.getType() == DungeonRoom.RoomType.TREASURE) {
+                    equipmentCollected++;
+                    System.out.println("Equipment collected: " + equipmentCollected + "/" + totalEquipmentInRoom);
+                    
+                    // Turn on lights when 2 out of 3 equipment items are collected
+                    if (equipmentCollected >= 2 && !treasureRoomLighted) {
+                        treasureRoomLighted = true;
+                        
+                        // Re-enable weather changes after collecting 2 equipment items
+                        if (weatherSystem != null) {
+                            weatherSystem.setWeatherChangesAllowed(true);
+                        }
+                        
+                        effectsManager.showFloatingText("Lights restored!", 
+                            new Point2D(gameCanvas.getWidth() / 2, gameCanvas.getHeight() / 2), Color.YELLOW);
+                        soundManager.playSound("start");
+                    }
+                }
             }
         }
         // If in treasure room, and all items are picked up, mark treasureClearedInLevel and update doors
@@ -946,28 +991,9 @@ private void generatePuzzles() {
             for (Door door : doors) {
                 if (isPlayerTouchingDoor(door)) {
                     if (door.isLocked()) {
-                        if (door.requiresKey()) {
-                            // Show message that door requires a key
-                            effectsManager.showFloatingText("This door requires a key", 
-                                new Point2D(door.getX() + door.getWidth()/2, door.getY() - 20), 
-                                Color.YELLOW);
-                        } else {
-                            // Show message about what's needed to unlock the door
-                            String message = "";
-                            switch (currentRoom.getType()) {
-                                case COMBAT:
-                                    message = "Defeat all enemies to unlock";
-                                    break;
-                                case BOSS:
-                                    message = "Defeat the boss to unlock";
-                                    break;
-                                default:
-                                    message = "This door is locked";
-                            }
-                            effectsManager.showFloatingText(message, 
-                                new Point2D(door.getX() + door.getWidth()/2, door.getY() - 20), 
-                                Color.RED);
-                        }
+                        // Show simple "locked" message for all locked doors
+                        Point2D textPosition = calculateSafeTextPosition(door);
+                        effectsManager.showFloatingText("locked", textPosition, Color.RED);
                     }
                     // If door is unlocked, the transition will be handled in checkRoomTransition
                 }
@@ -975,6 +1001,23 @@ private void generatePuzzles() {
             // Remove the key press to prevent multiple interactions
             activeKeys.remove(KeyCode.F);
         }
+    }
+    
+    private Point2D calculateSafeTextPosition(Door door) {
+        double textX = door.getX() + door.getWidth() / 2;
+        double textY = door.getY() - 20; // Default position above door
+        
+        // Ensure text stays within canvas bounds
+        double minY = 30; // Minimum Y to keep text visible
+        double maxY = gameCanvas.getHeight() - 30; // Maximum Y to keep text visible
+        
+        if (textY < minY) {
+            textY = door.getY() + door.getHeight() + 20; // Show below door instead
+        } else if (textY > maxY) {
+            textY = door.getY() - 20; // Keep above door
+        }
+        
+        return new Point2D(textX, textY);
     }
     
     private boolean isPlayerTouchingDoor(Door door) {
@@ -1077,11 +1120,88 @@ private void generatePuzzles() {
         // Draw the room background with appropriate lighting
         drawRoomBackground(gc);
         
-        // Draw the room doors with animations
+        // Draw statue in puzzle room
+        if (currentRoom != null && currentRoom.getType() == DungeonRoom.RoomType.PUZZLE && statueVisible && statueImage != null) {
+            gc.drawImage(statueImage, 
+                statuePosition.getX() - STATUE_SIZE/2, 
+                statuePosition.getY() - STATUE_SIZE/2, 
+                STATUE_SIZE, STATUE_SIZE);
+        }
+        
+        // Apply darkness overlay for treasure room when not lighted
+        if (currentRoom != null && currentRoom.getType() == DungeonRoom.RoomType.TREASURE && !treasureRoomLighted) {
+            // Apply a dark overlay similar to weather darkness effect
+            // This makes the room completely dark except for the torch light area
+            gc.setFill(Color.rgb(0, 0, 0, 1.0)); // 100% opacity black overlay - completely invisible
+            gc.fillRect(0, 0, gameCanvas.getWidth(), gameCanvas.getHeight());
+            
+            // If torch is active, draw the light area on top of the darkness
+            if (torchActive && player != null) {
+                Point2D lightCenter = new Point2D(player.getPosition().getX() + player.getSize()/2, 
+                                                 player.getPosition().getY() + player.getSize()/2);
+                
+                // Draw the torch light area with a radial gradient effect
+                // Use multiple circles with decreasing opacity to create a realistic light effect
+                
+                // Outer circle (dim light)
+                gc.setFill(Color.rgb(255, 255, 200, 0.1));
+                gc.fillOval(
+                    lightCenter.getX() - TORCH_LIGHT_RADIUS,
+                    lightCenter.getY() - TORCH_LIGHT_RADIUS,
+                    TORCH_LIGHT_RADIUS * 2,
+                    TORCH_LIGHT_RADIUS * 2
+                );
+                
+                // Draw middle circle (medium light)
+                gc.setFill(Color.rgb(255, 255, 200, 0.3));
+                gc.fillOval(
+                    lightCenter.getX() - TORCH_LIGHT_RADIUS * 0.7,
+                    lightCenter.getY() - TORCH_LIGHT_RADIUS * 0.7,
+                    TORCH_LIGHT_RADIUS * 1.4,
+                    TORCH_LIGHT_RADIUS * 1.4
+                );
+                
+                // Draw inner circle (bright light)
+                gc.setFill(Color.rgb(255, 255, 200, 0.5));
+                gc.fillOval(
+                    lightCenter.getX() - TORCH_LIGHT_RADIUS * 0.3,
+                    lightCenter.getY() - TORCH_LIGHT_RADIUS * 0.3,
+                    TORCH_LIGHT_RADIUS * 0.6,
+                    TORCH_LIGHT_RADIUS * 0.6
+                );
+            }
+        }
+        
+        // Draw the room doors with animations AFTER darkness overlay (so they're visible in torch light)
         renderDoorsWithAnimations(gc);
         
-        // Draw room items
+        // Draw torch in treasure room AFTER darkness overlay (so it's visible in dark room)
+        if (currentRoom != null && currentRoom.getType() == DungeonRoom.RoomType.TREASURE && torchActive && torchImage != null && player != null) {
+            // Draw torch near player
+            Point2D playerPos = player.getPosition();
+            gc.drawImage(torchImage, 
+                playerPos.getX() + player.getSize() - TORCH_SIZE/2, 
+                playerPos.getY() - TORCH_SIZE/2, 
+                TORCH_SIZE, TORCH_SIZE);
+        }
+        
+        // Draw room items AFTER darkness overlay (so they're visible in torch light)
         for (Item item : roomItems) {
+            // In treasure room, only show items if torch is active and item is within light radius
+            if (currentRoom != null && currentRoom.getType() == DungeonRoom.RoomType.TREASURE && !treasureRoomLighted) {
+                if (!torchActive || player == null) {
+                    continue; // Skip rendering if torch is not active
+                }
+                
+                Point2D lightCenter = new Point2D(player.getPosition().getX() + player.getSize()/2, 
+                                                 player.getPosition().getY() + player.getSize()/2);
+                double distance = lightCenter.distance(new Point2D(item.getX(), item.getY()));
+                
+                if (distance > TORCH_LIGHT_RADIUS) {
+                    continue; // Skip rendering if item is outside light radius
+                }
+            }
+            
             javafx.scene.image.Image itemImage = null;
             switch (item.getType()) {
                 case POTION:
@@ -1119,6 +1239,33 @@ private void generatePuzzles() {
                 gc.setFont(Font.font("Verdana", FontWeight.NORMAL, 10));
                 gc.setTextAlign(TextAlignment.CENTER);
                 gc.fillText(item.getName(), item.getX(), item.getY() - renderItemSize/2 - 10);
+            }
+        }
+        
+        // Draw spikes in treasure room
+        if (currentRoom != null && currentRoom.getType() == DungeonRoom.RoomType.TREASURE && !treasureRoomLighted) {
+            Point2D playerPos = player != null ? player.getPosition() : null;
+            
+            for (Point2D spikePos : spikePositions) {
+                // Only show spikes if torch is active and spike is within light radius
+                if (torchActive && playerPos != null) {
+                    Point2D lightCenter = new Point2D(playerPos.getX() + player.getSize()/2, 
+                                                     playerPos.getY() + player.getSize()/2);
+                    double distance = lightCenter.distance(spikePos);
+                    
+                    if (distance <= TORCH_LIGHT_RADIUS) {
+                        // Draw spike as a red triangle
+                        gc.setFill(Color.RED);
+                        gc.setStroke(Color.DARKRED);
+                        gc.setLineWidth(2);
+                        
+                        double[] xPoints = {spikePos.getX(), spikePos.getX() - SPIKE_SIZE/2, spikePos.getX() + SPIKE_SIZE/2};
+                        double[] yPoints = {spikePos.getY() - SPIKE_SIZE/2, spikePos.getY() + SPIKE_SIZE/2, spikePos.getY() + SPIKE_SIZE/2};
+                        
+                        gc.fillPolygon(xPoints, yPoints, 3);
+                        gc.strokePolygon(xPoints, yPoints, 3);
+                    }
+                }
             }
         }
         
@@ -1228,6 +1375,8 @@ private void generatePuzzles() {
             puzzleBgImage = new Image(getClass().getResourceAsStream("/com/dungeon/assets/images/puzzle.jpeg"));
             spawnBgImage = new Image(getClass().getResourceAsStream("/com/dungeon/assets/images/spawn.jpeg"));
             bossBgImage = new Image(getClass().getResourceAsStream("/com/dungeon/assets/images/boss.jpeg"));
+            statueImage = new Image(getClass().getResourceAsStream("/com/dungeon/assets/images/statue.png"));
+            torchImage = new Image(getClass().getResourceAsStream("/com/dungeon/assets/images/torch.gif"));
             backgroundsLoaded = true;
         }
         if (currentRoom == null) {
@@ -1243,7 +1392,10 @@ private void generatePuzzles() {
                 bgImage = combatBgImage;
                 break;
             case TREASURE:
+                // Only show background if room is lighted, otherwise keep it dark
+                if (treasureRoomLighted) {
                 bgImage = treasureBgImage;
+                }
                 break;
             case PUZZLE:
                 bgImage = puzzleBgImage;
@@ -1260,8 +1412,11 @@ private void generatePuzzles() {
         if (bgImage != null) {
             gc.drawImage(bgImage, 0, 0, gameCanvas.getWidth(), gameCanvas.getHeight());
         } else {
-            // Fallback to color for other room types
+            // Fallback to color for other room types or dark treasure room
             Color baseColor;
+            if (currentRoom.getType() == DungeonRoom.RoomType.TREASURE && !treasureRoomLighted) {
+                baseColor = Color.BLACK; // Completely dark for treasure room
+            } else {
         switch (currentRoom.getType()) {
                 case SPAWN:
                     baseColor = Color.rgb(0, 80, 0); // Dark green for spawn
@@ -1272,6 +1427,7 @@ private void generatePuzzles() {
             default:
                     baseColor = Color.rgb(30, 30, 30); // Dark gray default
                 break;
+                }
         }
             gc.setFill(baseColor);
             gc.fillRect(0, 0, gameCanvas.getWidth(), gameCanvas.getHeight());
@@ -1289,7 +1445,7 @@ private void generatePuzzles() {
         // Create a semi-transparent background for the stats
         double padding = 10;
         double boxWidth = 200;
-        double boxHeight = 120;
+        double boxHeight = 140; // Increased from 120 to accommodate weather text
         double boxX = padding;
         double boxY = padding;
         
@@ -1350,11 +1506,12 @@ private void generatePuzzles() {
                 healthBarX, healthBarY + healthBarHeight + 95);
         }
         
-        // Controls help at bottom
-        gc.setFill(Color.LIGHTBLUE);
-        gc.setTextAlign(TextAlignment.LEFT);
-        gc.fillText("WASD: Move | E: Shoot | Space: Melee | F: Interact | I: Inventory | Ctrl+W: Change Weather (Rain/Snow/Storm)", 
-            padding, gameCanvas.getHeight() - 20);
+        // Add torch controls for treasure room only
+        if (currentRoom != null && currentRoom.getType() == DungeonRoom.RoomType.TREASURE) {
+            gc.setFill(Color.YELLOW);
+            gc.fillText("V: Toggle Torch | Torch: " + (torchActive ? "ON" : "OFF"), 
+                padding, gameCanvas.getHeight() - 20);
+        }
     }
 
     public Player getPlayer() {
@@ -1584,6 +1741,11 @@ private void generatePuzzles() {
                 puzzles.put(room, puzzle);
                 System.out.println("Created puzzle: " + puzzle.getDescription());
                 
+                // Initialize statue in the center of the room
+                statueVisible = true;
+                statuePosition = new Point2D(gameCanvas.getWidth() / 2, gameCanvas.getHeight() / 2); // Move 50 pixels to the left
+                System.out.println("Statue placed at: " + statuePosition);
+                
                 // Only place key and random item if puzzle is already solved
                 if (puzzle.isSolved()) {
                     // Place key in puzzle room
@@ -1599,26 +1761,27 @@ private void generatePuzzles() {
                 break;
                 
             case TREASURE:
-                System.out.println("Spawning items in treasure room");
+                System.out.println("Populating treasure room...");
                 
-                // Place one weapon
-                double weaponAngle = random.nextDouble() * Math.PI * 2;
-                double weaponDistance = 80;
-                double weaponX = Math.cos(weaponAngle) * weaponDistance;
-                double weaponY = Math.sin(weaponAngle) * weaponDistance;
-                spawnWeapon(roomCenter.add(weaponX, weaponY));
+                // Force clear weather and disable weather changes for treasure room until equipment is collected
+                if (weatherSystem != null) {
+                    weatherSystem.setWeatherChangesAllowed(false);
+                    // Force clear weather immediately
+                    weatherSystem.startWeatherTransition(WeatherSystem.WeatherType.CLEAR);
+                }
                 
-                // Place one armor
-                double armorAngle = weaponAngle + Math.PI * 2/3; // 120 degrees from weapon
-                double armorX = Math.cos(armorAngle) * weaponDistance;
-                double armorY = Math.sin(armorAngle) * weaponDistance;
-                spawnArmor(roomCenter.add(armorX, armorY));
+                // Reset treasure room state
+                equipmentCollected = 0;
+                totalEquipmentInRoom = 3; // Always spawn 3 equipment items
+                treasureRoomLighted = false;
+                torchActive = false;
                 
-                // Place one potion
-                double potionAngle = weaponAngle + Math.PI * 4/3; // 240 degrees from weapon
-                double potionX = Math.cos(potionAngle) * weaponDistance;
-                double potionY = Math.sin(potionAngle) * weaponDistance;
-                spawnPotion(roomCenter.add(potionX, potionY));
+                // Generate spikes and safe areas
+                generateTreasureRoomLayout();
+                
+                // Spawn equipment items in safe areas
+                spawnTreasureRoomEquipment();
+                
                 break;
                 
             case COMBAT:
@@ -1871,9 +2034,8 @@ private void generatePuzzles() {
                 } else {
                     // Show message about locked door if player is touching it
                     if (door.requiresKey()) {
-                        effectsManager.showFloatingText("This door requires a key", 
-                            new Point2D(door.getX() + door.getWidth()/2, door.getY() - 20), 
-                            Color.YELLOW);
+                        Point2D textPosition = calculateSafeTextPosition(door);
+                        effectsManager.showFloatingText("locked", textPosition, Color.YELLOW);
                         
                         // Try to unlock with key if player has one
                         if (player.getInventory().hasItem(Item.ItemType.KEY)) {
@@ -1885,14 +2047,9 @@ private void generatePuzzles() {
                             }
                         }
                     } else {
-                        // Door is locked for other reasons (enemies not defeated)
-                        String message = "Defeat all enemies to unlock";
-                        if (currentRoom.getType() == DungeonRoom.RoomType.PUZZLE) {
-                            message = "Solve the puzzle to unlock";
-                        }
-                        effectsManager.showFloatingText(message, 
-                            new Point2D(door.getX() + door.getWidth()/2, door.getY() - 20), 
-                            Color.RED);
+                        // Door is locked for other reasons - show simple "locked" message
+                        Point2D textPosition = calculateSafeTextPosition(door);
+                        effectsManager.showFloatingText("locked", textPosition, Color.RED);
                     }
                 }
             }
@@ -1900,7 +2057,19 @@ private void generatePuzzles() {
     }
 
     private void transitionToRoom(DungeonRoom newRoom, Point2D entryPosition) {
-        if (newRoom == null || roomTransitionInProgress) return;
+        System.out.println("Transitioning to room: " + newRoom.getType());
+        
+        // Hide statue when leaving puzzle room
+        if (currentRoom != null && currentRoom.getType() == DungeonRoom.RoomType.PUZZLE) {
+            statueVisible = false;
+        }
+        
+        // Re-enable weather changes when leaving treasure room
+        if (currentRoom != null && currentRoom.getType() == DungeonRoom.RoomType.TREASURE) {
+            if (weatherSystem != null) {
+                weatherSystem.setWeatherChangesAllowed(true);
+            }
+        }
 
         soundManager.stopSound("running");
         activeKeys.clear(); // Clear any "stuck" keys
@@ -1924,6 +2093,16 @@ private void generatePuzzles() {
                 projectiles.clear();
                 roomItems.clear();
                 doors.clear();
+                
+                // Reset statue state
+                statueVisible = false;
+                
+                // Reset treasure room state
+                torchActive = false;
+                treasureRoomLighted = false;
+                equipmentCollected = 0;
+                spikePositions.clear();
+                safePositions.clear();
                 
                 // Reset room cleared state
                 roomCleared = false;
@@ -2629,10 +2808,10 @@ public void interactWithPuzzle() {
             descriptionLabel.setMaxWidth(400);
             
             // Create question label
-            Label questionLabel = new Label(puzzle.getQuestion());
-            questionLabel.setStyle("-fx-font-size: 18px; -fx-text-fill: #FFD700; -fx-font-weight: bold;");
-            questionLabel.setWrapText(true);
-            questionLabel.setMaxWidth(400);
+            TextArea questionArea = new TextArea(puzzle.getQuestion());
+            questionArea.setStyle("-fx-font-size: 18px; -fx-text-fill: #FFD700; -fx-font-weight: bold;");
+            questionArea.setWrapText(true);
+            questionArea.setMaxWidth(400);
             
             // Create answer field
             TextField answerField = new TextField();
@@ -2665,7 +2844,7 @@ public void interactWithPuzzle() {
             });
             
             // Add components to container
-            rootContainer.getChildren().addAll(titleLabel, descriptionLabel, questionLabel, answerField, feedbackLabel, submitButton, hintIcon);
+            rootContainer.getChildren().addAll(titleLabel, descriptionLabel, questionArea, answerField, feedbackLabel, submitButton, hintIcon);
             
             // Create the scene
             Scene scene = new Scene(rootContainer);
@@ -2994,6 +3173,9 @@ public void onPuzzleSolved(DungeonRoom room) {
         // Mark puzzle as solved
         puzzleCompleted = true;
         
+        // Hide the statue
+        statueVisible = false;
+        
         // Play success sound
         soundManager.playSound("start");
         
@@ -3105,6 +3287,9 @@ public void onPuzzleSolved(DungeonRoom room) {
             weatherSpeedMultiplier = weatherSystem.getPlayerSpeedMultiplier();
         }
         
+        // Check for statue collision in puzzle rooms
+        checkStatueCollision();
+        
         // Limit player movement to stay within the room boundaries
         double minX = 10; // Left wall + margin
         double minY = 10; // Top wall + margin
@@ -3121,6 +3306,30 @@ public void onPuzzleSolved(DungeonRoom room) {
         // Update player position if it changed due to boundaries
         if (newX != currentPos.getX() || newY != currentPos.getY()) {
             player.setPosition(new Point2D(newX, newY));
+        }
+    }
+    
+    private void checkStatueCollision() {
+        // Only check statue collision in puzzle rooms when statue is visible
+        if (currentRoom != null && currentRoom.getType() == DungeonRoom.RoomType.PUZZLE && 
+            statueVisible && statuePosition != null && player != null) {
+            
+            Point2D playerCenter = player.getPosition().add(player.getSize() / 2, player.getSize() / 2);
+            double distance = playerCenter.distance(statuePosition);
+            
+            // If player is too close to statue, push them back
+            double minDistance = (player.getSize() / 2 + STATUE_SIZE / 2);
+            if (distance < minDistance) {
+                // Calculate direction from statue to player
+                Point2D direction = playerCenter.subtract(statuePosition).normalize();
+                
+                // Calculate new position that maintains minimum distance
+                Point2D newPlayerCenter = statuePosition.add(direction.multiply(minDistance));
+                Point2D newPlayerPosition = newPlayerCenter.subtract(player.getSize() / 2, player.getSize() / 2);
+                
+                // Set player to new position
+                player.setPosition(newPlayerPosition);
+            }
         }
     }
     
@@ -3251,6 +3460,23 @@ public void onPuzzleSolved(DungeonRoom room) {
         
         // Render each door with its animation state
         for (Door door : doors) {
+            // In treasure room, only show doors if torch is active and door is within light radius
+            if (currentRoom != null && currentRoom.getType() == DungeonRoom.RoomType.TREASURE && !treasureRoomLighted) {
+                if (!torchActive || player == null) {
+                    continue; // Skip rendering if torch is not active
+                }
+                
+                Point2D lightCenter = new Point2D(player.getPosition().getX() + player.getSize()/2, 
+                                                 player.getPosition().getY() + player.getSize()/2);
+                Point2D doorCenter = new Point2D(door.getX() + door.getWidth()/2, 
+                                               door.getY() + door.getHeight()/2);
+                double distance = lightCenter.distance(doorCenter);
+                
+                if (distance > TORCH_LIGHT_RADIUS) {
+                    continue; // Skip rendering if door is outside light radius
+                }
+            }
+            
             Double openAngle = doorAnimations.getOrDefault(door, 0.0);
             Color doorColor;
             
@@ -3356,6 +3582,144 @@ public void onPuzzleSolved(DungeonRoom room) {
         } catch (Exception e) {
             System.err.println("Error loading weapon images: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+
+    private void checkStatueInteraction() {
+        // Only check statue interaction in puzzle rooms when statue is visible
+        if (currentRoom != null && currentRoom.getType() == DungeonRoom.RoomType.PUZZLE && 
+            statueVisible && statuePosition != null && player != null) {
+            
+            // Calculate distance between player and statue
+            Point2D playerCenter = player.getPosition().add(player.getSize() / 2, player.getSize() / 2);
+            double distance = playerCenter.distance(statuePosition);
+            
+            // Show floating text when player is near statue
+            if (distance < STATUE_INTERACTION_RANGE) {
+                // Show the floating text slightly above the statue
+                Point2D textPosition = new Point2D(statuePosition.getX(), statuePosition.getY() - STATUE_SIZE/2 - 30);
+                effectsManager.showFloatingText("Press F to unlock the doors", textPosition, Color.YELLOW);
+            }
+        }
+    }
+    
+    private void toggleTorch() {
+        if (currentRoom != null && currentRoom.getType() == DungeonRoom.RoomType.TREASURE) {
+            torchActive = !torchActive;
+            String message = torchActive ? "Torch lit!" : "Torch extinguished!";
+            Point2D playerPos = player.getPosition();
+            effectsManager.showFloatingText(message, playerPos, torchActive ? Color.YELLOW : Color.GRAY);
+        }
+    }
+    
+    private void generateTreasureRoomLayout() {
+        spikePositions.clear();
+        safePositions.clear();
+        
+        double roomWidth = gameCanvas.getWidth();
+        double roomHeight = gameCanvas.getHeight();
+        
+        // Create a grid of positions
+        int gridSize = 8;
+        double cellWidth = roomWidth / gridSize;
+        double cellHeight = roomHeight / gridSize;
+        
+        // Generate random spike pattern (about 60% of cells have spikes)
+        for (int x = 0; x < gridSize; x++) {
+            for (int y = 0; y < gridSize; y++) {
+                double posX = x * cellWidth + cellWidth / 2;
+                double posY = y * cellHeight + cellHeight / 2;
+                
+                // Keep center area and door areas safe
+                boolean isCenter = (x >= 3 && x <= 4 && y >= 3 && y <= 4);
+                boolean isDoorArea = (x == 0 || x == gridSize-1 || y == 0 || y == gridSize-1);
+                
+                if (!isCenter && !isDoorArea && random.nextDouble() < 0.6) {
+                    spikePositions.add(new Point2D(posX, posY));
+                } else {
+                    safePositions.add(new Point2D(posX, posY));
+                }
+            }
+        }
+        
+        System.out.println("Generated " + spikePositions.size() + " spikes and " + safePositions.size() + " safe areas");
+    }
+    
+    private void spawnTreasureRoomEquipment() {
+        // Spawn 3 equipment items in safe areas, scattered near the middle area
+        List<Point2D> availableSafePositions = new ArrayList<>(safePositions);
+        double roomCenterX = gameCanvas.getWidth() / 2;
+        double roomCenterY = gameCanvas.getHeight() / 2;
+        double minDist = Math.min(gameCanvas.getWidth(), gameCanvas.getHeight()) * 0.18; // not too close to center
+        double maxDist = Math.min(gameCanvas.getWidth(), gameCanvas.getHeight()) * 0.38; // not too far from center
+        // Filter positions to a "middle ring"
+        List<Point2D> middleRing = new ArrayList<>();
+        for (Point2D pos : availableSafePositions) {
+            double dist = pos.distance(roomCenterX, roomCenterY);
+            if (dist >= minDist && dist <= maxDist) {
+                middleRing.add(pos);
+            }
+        }
+        // If not enough, fallback to all safe positions
+        List<Point2D> spawnPositions = middleRing.size() >= 3 ? middleRing : availableSafePositions;
+        Collections.shuffle(spawnPositions, random);
+        int equipmentCount = Math.min(3, spawnPositions.size());
+        for (int i = 0; i < equipmentCount; i++) {
+            Point2D position = spawnPositions.get(i);
+            // Add a small random offset to scatter
+            double offsetX = (random.nextDouble() - 0.5) * 40;
+            double offsetY = (random.nextDouble() - 0.5) * 40;
+            Point2D scatterPos = new Point2D(position.getX() + offsetX, position.getY() + offsetY);
+            Item equipment;
+            switch (i) {
+                case 0:
+                    Weapon.WeaponType[] weaponTypes = Weapon.WeaponType.values();
+                    Weapon.WeaponType weaponType = weaponTypes[random.nextInt(weaponTypes.length)];
+                    int weaponDamage = Math.min(20 + currentLevel * 5, 30); // Cap at 30
+                    equipment = new Weapon(weaponType.name(), "A powerful " + weaponType.name().toLowerCase(), weaponDamage, weaponType, false);
+                    break;
+                case 1:
+                    Armor.ArmorType[] armorTypes = Armor.ArmorType.values();
+                    Armor.ArmorType armorType = armorTypes[random.nextInt(armorTypes.length)];
+                    equipment = new Armor(armorType.name() + " Armor", "Protective " + armorType.name().toLowerCase(), armorType);
+                    break;
+                case 2:
+                    equipment = new Item("Health Potion", "Restores 30 health", Item.ItemType.POTION, 30, true);
+                    break;
+                default:
+                    equipment = new Item("Gold", "Valuable treasure", Item.ItemType.TREASURE, 50, true);
+                    break;
+            }
+            equipment.setX(scatterPos.getX());
+            equipment.setY(scatterPos.getY());
+            equipment.setSize(25);
+            roomItems.add(equipment);
+        }
+    }
+
+    private void checkSpikeCollision() {
+        if (currentRoom != null && currentRoom.getType() == DungeonRoom.RoomType.TREASURE && 
+            player != null && !treasureRoomLighted) {
+            
+            Point2D playerCenter = player.getPosition().add(player.getSize() / 2, player.getSize() / 2);
+            
+            for (Point2D spikePos : spikePositions) {
+                double distance = playerCenter.distance(spikePos);
+                
+                if (distance < (player.getSize() / 2 + SPIKE_SIZE / 2)) {
+                    // Player hit a spike
+                    player.takeDamage(SPIKE_DAMAGE);
+                    effectsManager.showFloatingText("-" + (int)SPIKE_DAMAGE, player.getPosition(), Color.RED);
+                    soundManager.playSound("damage");
+                    
+                    // Push player back slightly
+                    Point2D direction = playerCenter.subtract(spikePos).normalize();
+                    Point2D newPos = player.getPosition().add(direction.multiply(30));
+                    player.setPosition(newPos);
+                    
+                    break; // Only hit one spike at a time
+                }
+            }
         }
     }
 

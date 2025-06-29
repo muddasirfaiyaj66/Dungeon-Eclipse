@@ -80,6 +80,9 @@ public class WeatherSystem {
     private int weatherUpdateCount = 0;
     private int animationUpdateCount = 0;
 
+    // Control weather changes (for treasure room)
+    private volatile boolean weatherChangesAllowed = true;
+
     public WeatherSystem() {
         System.out.println("🌤️  [WeatherSystem] Initializing multithreaded weather system...");
         loadWeatherImages();
@@ -194,6 +197,12 @@ public class WeatherSystem {
     }
 
     private void changeWeather() {
+        // Don't change weather if changes are not allowed (e.g., in treasure room)
+        if (!weatherChangesAllowed) {
+            System.out.println("🌤️  [WeatherThread] Weather change blocked - treasure room active");
+            return;
+        }
+        
         WeatherType[] weathers = WeatherType.values();
         WeatherType newWeather;
         do {
@@ -215,8 +224,15 @@ public class WeatherSystem {
 
     // This method is called from the main game thread (JavaFX thread)
     public void render(GraphicsContext gc, double canvasWidth, double canvasHeight) {
-        WeatherType effectiveWeather = isTransitioning.get() ? 
+        WeatherType effectiveWeather;
+        
+        // If weather changes are disabled, force clear weather
+        if (!weatherChangesAllowed) {
+            effectiveWeather = WeatherType.CLEAR;
+        } else {
+            effectiveWeather = isTransitioning.get() ? 
             interpolateWeather(currentWeather.get(), targetWeather.get(), transitionProgress) : currentWeather.get();
+        }
         
         // Apply weather overlay
         if (effectiveWeather.getOverlayColor() != Color.TRANSPARENT) {
@@ -358,6 +374,25 @@ public class WeatherSystem {
 
     public String getWeatherName() {
         return currentWeather.get().getName();
+    }
+
+    // Control weather changes for treasure room
+    public void setWeatherChangesAllowed(boolean allowed) {
+        this.weatherChangesAllowed = allowed;
+        if (!allowed) {
+            System.out.println("🌤️  [WeatherSystem] Weather changes disabled for treasure room");
+            // Force clear weather when disabling changes
+            currentWeather.set(WeatherType.CLEAR);
+            targetWeather.set(WeatherType.CLEAR);
+            isTransitioning.set(false);
+            transitionProgress = 0;
+        } else {
+            System.out.println("🌤️  [WeatherSystem] Weather changes re-enabled");
+        }
+    }
+    
+    public boolean isWeatherChangesAllowed() {
+        return weatherChangesAllowed;
     }
 
     // Cleanup method - call this when shutting down the game
