@@ -1,5 +1,6 @@
 package com.dungeon;
 
+import com.dungeon.server.PuzzleServer;
 import com.dungeon.utils.UIUtils;
 
 import javafx.animation.FadeTransition;
@@ -15,6 +16,14 @@ public class Main extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception {
+
+         new Thread(() -> {
+            try {
+                PuzzleServer.start(); 
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }).start();
         try {
             // Set application icon using the utility method
             UIUtils.setStageIcon(primaryStage);

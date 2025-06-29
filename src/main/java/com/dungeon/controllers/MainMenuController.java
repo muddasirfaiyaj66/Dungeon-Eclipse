@@ -11,12 +11,12 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
-import javafx.stage.Modality;
-import javafx.stage.Stage;
-import javafx.util.Duration;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
+import javafx.util.Duration;
 
 public class MainMenuController {
     
@@ -217,7 +217,7 @@ public class MainMenuController {
     @SuppressWarnings("unused")
     private void openChat() {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/dungeon/fxml/Chat.fxml"));
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/dungeon/fxml/ChatMenu.fxml"));
             Parent chatRoot = loader.load();
             Scene chatScene = new Scene(chatRoot);
             Stage chatStage = new Stage();
