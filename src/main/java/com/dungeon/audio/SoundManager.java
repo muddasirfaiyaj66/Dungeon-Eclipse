@@ -66,7 +66,7 @@ public class SoundManager {
         loadSoundEffect("gameOver", "game-over-160612.mp3");
         loadSoundEffect("victory", "victory.mp3");
         loadSoundEffect("damage", "damage.mp3");
-        // Add new sounds here if needed, for example:
+        loadSoundEffect("death", "death.mp3");        // Add new sounds here if needed, for example:
         // loadSoundEffect("puzzle_solved", "level-passed-86288.mp3");
 
 

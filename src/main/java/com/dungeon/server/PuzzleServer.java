@@ -80,6 +80,24 @@ public class PuzzleServer {
             }
             
             for (Puzzle puzzle : puzzles) {
+                String lowerInput = input.toLowerCase();
+                // If user asks 'why' or 'how' and mentions the answer, provide explanation
+                if ((lowerInput.contains("why") || lowerInput.contains("how")) && lowerInput.contains(puzzle.getAnswer().toLowerCase())) {
+                    System.out.println("✅ Explanation requested for answer!");
+                    out.write("Explanation: " + puzzle.getExplanation() + "\n");
+                    out.flush();
+                    return;
+                }
+            }
+            // If user just says 'why' or 'how', prompt for clarification
+            String trimmedInput = input.trim().toLowerCase();
+            if (trimmedInput.equals("why") || trimmedInput.equals("how")) {
+                out.write("Please specify which answer you want explained, e.g., 'why is the answer keyboard?'\n");
+                out.flush();
+                return;
+            }
+            for (Puzzle puzzle : puzzles) {
+                String lowerInput = input.toLowerCase();
                 // Check for exact match with question
                 if (input.equalsIgnoreCase(puzzle.getQuestion())) {
                     System.out.println("✅ Exact question match found!");
@@ -95,16 +113,16 @@ public class PuzzleServer {
                     return;
                 }
                 // Check for partial match with question (contains)
-                else if (puzzle.getQuestion().toLowerCase().contains(input.toLowerCase()) || 
-                         input.toLowerCase().contains(puzzle.getQuestion().toLowerCase())) {
+                else if (puzzle.getQuestion().toLowerCase().contains(lowerInput) || 
+                         lowerInput.contains(puzzle.getQuestion().toLowerCase())) {
                     System.out.println("✅ Partial question match found!");
                     out.write("Hint: " + puzzle.getHint() + "\n");
                     out.flush();
                     return;
                 }
                 // Check for partial match with answer (contains)
-                else if (puzzle.getAnswer().toLowerCase().contains(input.toLowerCase()) || 
-                         input.toLowerCase().contains(puzzle.getAnswer().toLowerCase())) {
+                else if (puzzle.getAnswer().toLowerCase().contains(lowerInput) || 
+                         lowerInput.contains(puzzle.getAnswer().toLowerCase())) {
                     System.out.println("✅ Partial answer match found!");
                     out.write("🎉 Congratulations! You solved the puzzle!\n");
                     out.flush();

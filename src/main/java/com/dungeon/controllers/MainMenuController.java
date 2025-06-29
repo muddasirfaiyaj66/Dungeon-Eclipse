@@ -248,7 +248,7 @@ public class MainMenuController {
     @FXML
     public void initialize() {
         // Set the background image for the main menu
-        Image bgImage = new Image(getClass().getResourceAsStream("/com/dungeon/assets/images/mainmenu.jpeg"));
+        Image bgImage = new Image(getClass().getResourceAsStream("/com/dungeon/assets/images/mainmenu.jpg"));
         ImageView bgView = new ImageView(bgImage);
         bgView.setPreserveRatio(false);
         bgView.setFitWidth(mainMenuRoot.getWidth());

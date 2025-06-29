@@ -38,7 +38,7 @@ public class Enemy extends Entity {
         SKELETON(60, 8, 100, 40, 150),
         ORC(100, 15, 80, 50, 200),
         MAGE(60, 15, 120, 30, 200),
-        BOSS(200, 20, 80, 60, 500);
+        BOSS(500, 20, 80, 60, 500);
         
         private final int health;
         private final int damage;

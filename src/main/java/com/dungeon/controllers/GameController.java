@@ -264,16 +264,12 @@ private boolean backgroundsLoaded = false;
     optionsButton.setPrefWidth(200);
     optionsButton.setOnAction(e -> showOptions());
 
-    javafx.scene.control.Button chatButton = new javafx.scene.control.Button("Chat");
-    chatButton.setPrefWidth(200);
-    chatButton.setOnAction(e -> showChat());
-
     javafx.scene.control.Button exitButton = new javafx.scene.control.Button("Exit to Main Menu");
     exitButton.setPrefWidth(200);
     exitButton.setOnAction(e -> exitToMainMenu());
 
     // Add components to menu
-    pauseMenu.getChildren().addAll(title, resumeButton, optionsButton, chatButton, exitButton);
+    pauseMenu.getChildren().addAll(title, resumeButton, optionsButton, exitButton);
 
     // Initially hide the pause menu
     pauseMenu.setVisible(false);
@@ -1370,12 +1366,12 @@ private void generatePuzzles() {
     private void drawRoomBackground(GraphicsContext gc) {
         if (!backgroundsLoaded) {
             // Load background images once
-            combatBgImage = new Image(getClass().getResourceAsStream("/com/dungeon/assets/images/combat.jpeg"));
-            treasureBgImage = new Image(getClass().getResourceAsStream("/com/dungeon/assets/images/treasure.jpeg"));
-            puzzleBgImage = new Image(getClass().getResourceAsStream("/com/dungeon/assets/images/puzzle.jpeg"));
-            spawnBgImage = new Image(getClass().getResourceAsStream("/com/dungeon/assets/images/spawn.jpeg"));
-            bossBgImage = new Image(getClass().getResourceAsStream("/com/dungeon/assets/images/boss.jpeg"));
-            statueImage = new Image(getClass().getResourceAsStream("/com/dungeon/assets/images/statue.png"));
+            combatBgImage = new Image(getClass().getResourceAsStream("/com/dungeon/assets/images/combat.jpg"));
+            treasureBgImage = new Image(getClass().getResourceAsStream("/com/dungeon/assets/images/treasure.jpg"));
+            puzzleBgImage = new Image(getClass().getResourceAsStream("/com/dungeon/assets/images/puzzle.jpg"));
+            spawnBgImage = new Image(getClass().getResourceAsStream("/com/dungeon/assets/images/spawn.jpg"));
+            bossBgImage = new Image(getClass().getResourceAsStream("/com/dungeon/assets/images/boss.jpg"));
+            statueImage = new Image(getClass().getResourceAsStream("/com/dungeon/assets/images/statue.gif"));
             torchImage = new Image(getClass().getResourceAsStream("/com/dungeon/assets/images/torch.gif"));
             backgroundsLoaded = true;
         }
@@ -2808,10 +2804,12 @@ public void interactWithPuzzle() {
             descriptionLabel.setMaxWidth(400);
             
             // Create question label
-            TextArea questionArea = new TextArea(puzzle.getQuestion());
-            questionArea.setStyle("-fx-font-size: 18px; -fx-text-fill: #FFD700; -fx-font-weight: bold;");
-            questionArea.setWrapText(true);
-            questionArea.setMaxWidth(400);
+           TextArea questionArea = new TextArea(puzzle.getQuestion());
+           questionArea.setStyle("-fx-font-size: 18px; -fx-text-fill:rgb(7, 6, 2); -fx-font-weight: bold;");
+           questionArea.setWrapText(true);
+           questionArea.setMaxWidth(400);
+           questionArea.setEditable(false); // This makes it read-only but selectable
+
             
             // Create answer field
             TextField answerField = new TextField();
@@ -3100,7 +3098,7 @@ public void interactWithPuzzle() {
         enemiesDefeated++;
         player.addScore((int)enemy.getScoreValue());
         dropItemFromEnemy(enemy);
-        soundManager.playSound("character");
+        soundManager.playSound("death");
         
         // If in boss room and the defeated enemy is the boss, trigger victory immediately
         if (currentRoom != null && currentRoom.getType() == DungeonRoom.RoomType.BOSS && 

@@ -63,7 +63,7 @@ public class Player extends Entity {
          try {
             // Load the player image from resources
           playerImage = new Image(
-    getClass().getResourceAsStream("/com/dungeon/assets/images/player.png"),
+    getClass().getResourceAsStream("/com/dungeon/assets/images/player.gif"),
     64,   // width
     64,   // height
     true, // preserve ratio

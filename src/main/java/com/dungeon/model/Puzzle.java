@@ -22,6 +22,7 @@ public class Puzzle {
     private String question;
     private String answer;
     private String hint;
+    private String explanation;
     private boolean solved;
 
     // Default constructor needed for Jackson
@@ -54,6 +55,9 @@ public class Puzzle {
 
     public String getHint() { return hint; }
     public void setHint(String hint) { this.hint = hint; }
+
+    public String getExplanation() { return explanation; }
+    public void setExplanation(String explanation) { this.explanation = explanation; }
 
     public boolean isSolved() { return solved; }
     public void setSolved(boolean solved) { this.solved = solved; }

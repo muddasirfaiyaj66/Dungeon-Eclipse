@@ -52,7 +52,7 @@ public class GameOverController {
     @FXML
     public void initialize() {
         // Set the background image for the game over screen
-        Image bgImage = new Image(getClass().getResourceAsStream("/com/dungeon/assets/images/gameover.jpeg"));
+        Image bgImage = new Image(getClass().getResourceAsStream("/com/dungeon/assets/images/gameover.jpg"));
         ImageView bgView = new ImageView(bgImage);
         bgView.setPreserveRatio(false);
         bgView.setFitWidth(gameOverRoot.getWidth());
