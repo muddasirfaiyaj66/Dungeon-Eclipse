@@ -20,13 +20,16 @@ mvn javafx:run
 ```
 
 ## Game Features
-- Procedurally generated dungeons
+- Procedurally generated dungeons with level up progression
 - Real-time combat system
 - Inventory management
-- Puzzle-solving mechanics
+- Puzzle-solving mechanics with hinting bot
+- Treasure room with items and interesting features
+- Weather system that changes automatically with attribute changes of player and enemies depending on weather.
 - Boss battles
 - Dynamic health and score system
-- Retro-inspired graphics and sound effects
+- Extra chat system using gemini API
+- Retro-inspired graphics and controllable sound effects
 
 ## Project Structure
 ```
@@ -48,8 +51,10 @@ src/
 ```
 
 ## Controls
-- WASD or Arrow Keys: Move character
-- Space: Attack
-- E: Interact
+- WASD: Move character
+- E or Mouse click: Attack
+- F: Interact
 - I: Open inventory
+- V: Toggle torch
+- ctrl+W: Manual weather change
 - ESC: Pause menu
