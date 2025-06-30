@@ -1,0 +1,112 @@
+[
+  {
+    "type": "RIDDLE",
+    "difficulty": "EASY",
+    "description": "Simple riddle about a common object.",
+    "question": "What has keys but no locks, space but no room, and you can enter but not go in?",
+    "answer": "keyboard",
+    "hint": "Think about computer input devices.",
+    "solved": false,
+    "explanation": "A keyboard has keys (the buttons), a space bar (space), and an 'Enter' key, but you can't physically enter it or use the keys to unlock anything."
+  },
+ {
+    "type": "RIDDLE",
+    "difficulty": "MEDIUM",
+    "description": "Animal riddle.",
+    "question": "What animal keeps the best time?",
+    "answer": "watchdog",
+    "hint": "It's a compound word involving a pet and time.",
+    "solved": false,
+    "explanation": "A 'watchdog' is a dog that keeps watch (time), and the word is a play on a pet and a timepiece."
+  },
+  {
+    "type": "RIDDLE",
+    "difficulty": "EASY",
+    "description": "Simple object riddle.",
+    "question": "I speak without a mouth and hear without ears. I have nobody, but I come alive with the wind. What am I?",
+    "answer": "echo",
+    "hint": "Think about sounds reflecting.",
+    "solved": false,
+    "explanation": "An echo is a sound that repeats (speaks) without a mouth and is heard without ears, and it happens when sound bounces back, often carried by the wind."
+  },
+  {
+    "type": "WORD",
+    "difficulty": "MEDIUM",
+    "description": "Word puzzle about letters.",
+    "question": "What 5-letter word becomes shorter when you add two letters to it?",
+    "answer": "short",
+    "hint": "The word describes its own length.",
+    "solved": false,
+    "explanation": "The word 'short' is five letters, and adding two letters ('e' and 'r') makes it 'shorter', which is also its meaning."
+  },
+  {
+    "type": "RIDDLE",
+    "difficulty": "EASY",
+    "description": "Color riddle.",
+    "question": "What color is the wind?",
+    "answer": "blue",
+    "hint": "Think about a common phrase about the wind.",
+    "solved": false,
+    "explanation": "The phrase 'the wind blew' sounds like 'blue', making it a pun on the color and the action."
+  },
+  {
+    "type": "WORD",
+    "difficulty": "HARD",
+    "description": "Anagram puzzle.",
+    "question": "Rearrange the letters 'LISTEN' to form another word.",
+    "answer": "silent",
+    "hint": "The answer is a word meaning quiet.",
+    "solved": false,
+    "explanation": "Rearranging the letters in 'LISTEN' gives 'SILENT', and both words are related to sound and quietness."
+  },
+  {
+    "type": "RIDDLE",
+    "difficulty": "MEDIUM",
+    "description": "Time riddle.",
+    "question": "What time is it when the clock strikes 13?",
+    "answer": "time",
+    "hint": "Think about what you do when you see the time.",
+    "solved": false,
+    "explanation": "When the clock strikes 13, it's time to fix the clock, so the answer is 'time'."
+  },
+  {
+    "type": "RIDDLE",
+    "difficulty": "MEDIUM",
+    "description": "Object riddle.",
+    "question": "What gets wetter and wetter the more it dries?",
+    "answer": "towel",
+    "hint": "Think about bathroom items.",
+    "solved": false,
+    "explanation": "A towel dries you off, so it gets wetter as it absorbs water while drying you."
+  },
+  {
+    "type": "WORD",
+    "difficulty": "EASY",
+    "description": "Letter puzzle.",
+    "question": "What letter of the alphabet has the most water?",
+    "answer": "sea",
+    "hint": "It's not a single letter but sounds like one.",
+    "solved": false,
+    "explanation": "The letter 'C' sounds like 'sea', which contains a lot of water."
+  },
+  {
+    "type": "RIDDLE",
+    "difficulty": "MEDIUM",
+    "description": "Animal riddle.",
+    "question": "What do you call a bear with no teeth?",
+    "answer": "gummy",
+    "hint": "Think about candy without teeth.",
+    "solved": false,
+    "explanation": "A bear with no teeth is 'gummy', which is also a type of candy (gummy bear)."
+  },
+  {
+    "type": "WORD",
+    "difficulty": "HARD",
+    "description": "Palindromic word.",
+    "question": "What 7-letter word is the same forwards and backwards and relates to a race?",
+    "answer": "racecar",
+    "hint": "It's a type of fast car.",
+    "solved": false,
+    "explanation": "'Racecar' is a palindrome (spelled the same forwards and backwards) and is a type of car used in races."
+  }
+]

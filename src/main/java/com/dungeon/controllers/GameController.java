@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.io.IOException; 
+import java.util.Collections;
 
 import com.dungeon.audio.SoundManager;
 import com.dungeon.effects.EffectsManager;
@@ -19,6 +20,7 @@ import com.dungeon.model.Item;
 import com.dungeon.model.Puzzle;
 import com.dungeon.model.Weapon;
 import com.dungeon.model.Armor;
+import com.dungeon.model.WeatherSystem;
 import com.dungeon.model.entity.Player;
 import com.dungeon.model.entity.Enemy;
 import com.dungeon.model.entity.Entity;
@@ -42,6 +44,7 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextArea;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -55,6 +58,9 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.util.Duration;
 import javafx.animation.FadeTransition;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.stage.Window;
 
 public class GameController {
     // Enum for door directions
@@ -82,13 +88,15 @@ public class GameController {
     private boolean roomTransitionInProgress;
     private double mouseX, mouseY;
     private Random random;
+    private Map<DungeonRoom, Puzzle> puzzles = new HashMap<>();
+private List<Puzzle> allPuzzles;
     private EffectsManager effectsManager;
     private LightingEffect lightingEffect;
     private List<String> floatingTexts; // For displaying damage, pickups, etc.
     private List<ProjectileAttack> playerProjectiles;
     private List<EnemyAbility.Projectile> enemyProjectiles;
     private List<Item> roomItems; // Items in the current room
-    private java.util.Map<DungeonRoom, Puzzle> puzzles; // Puzzles for puzzle rooms
+    // private java.util.Map<DungeonRoom, Puzzle> puzzles; // Puzzles for puzzle rooms
     private List<Door> doors; // Doors in the current room
     private double timeSinceLastSpawn;
     private boolean bossDefeated;
@@ -111,6 +119,41 @@ public class GameController {
     // Add tracking for puzzle and treasure room clear states
     private boolean puzzleClearedInLevel = false;
     private boolean treasureClearedInLevel = false;
+    private boolean isInventoryOpen = false; // Track if inventory is open
+    private boolean justLeveledUp = false; // Track if player just leveled up
+    private double bossMinionSummonTimer = 0;
+     private boolean bossEnraged = false;
+     private Set<Enemy> enemiesToBounceBack = new HashSet<>();
+     private int currentWave = 1;
+     private final int totalWaves = 2;
+     private Map<Enemy, Double> enemyAttackCooldowns = new HashMap<>();
+    private static final double ATTACK_COOLDOWN = 2.0; // 2 seconds cooldown
+    private static final double BOUNCE_DISTANCE = 100.0; // Distance to bounce back
+    
+    // Statue-related fields
+    private boolean statueVisible = false;
+    private Point2D statuePosition;
+    private static final double STATUE_SIZE = 200.0;
+    private static final double STATUE_INTERACTION_RANGE = 250.0;
+    
+    // Torch and treasure room fields
+    private boolean torchActive = false;
+    private Image torchImage;
+    private static final double TORCH_LIGHT_RADIUS = 150.0;
+    private static final double TORCH_SIZE = 40.0;
+    private List<Point2D> spikePositions = new ArrayList<>();
+    private List<Point2D> safePositions = new ArrayList<>();
+    private int equipmentCollected = 0;
+    private int totalEquipmentInRoom = 0;
+    private boolean treasureRoomLighted = false;
+    private static final double SPIKE_DAMAGE = 5.0;
+    private static final double SPIKE_SIZE = 20.0;
+    
+    private Map<Enemy.EnemyType, javafx.scene.image.Image> enemyImages = new HashMap<>();
+    private Map<Weapon.WeaponType, javafx.scene.image.Image> weaponImages = new HashMap<>();
+    private GraphicsContext gc;
+    private Map<Door, Double> doorAnimations = new HashMap<>();
+    private long lastDoorCheckTime = 0;
 
     // Room transition constants
     private static final double DOOR_WIDTH = 40;
@@ -126,9 +169,16 @@ public class GameController {
     private javafx.scene.layout.VBox pauseMenu;
     
     private SoundManager soundManager;
-    
+    private Image combatBgImage;
+   private Image treasureBgImage;
+   private Image puzzleBgImage;
+   private Image spawnBgImage;
+   private Image bossBgImage;
+   private Image statueImage;
+private boolean backgroundsLoaded = false;
+    private WeatherSystem weatherSystem;
     // Add resize handling
-    private void handleResize() {
+   private void handleResize() {
         if (canvasContainer == null || gameCanvas == null) {
             System.err.println("WARNING: canvasContainer or gameCanvas is null in handleResize");
             return;
@@ -145,6 +195,9 @@ public class GameController {
             if (newVal == null) return;
             
             System.out.println("Canvas width changed: " + oldVal + " -> " + newVal);
+            if (effectsManager != null) {
+                effectsManager.resize(newVal.doubleValue(), gameCanvas.getHeight());
+            }
             
             // Force rendering if player exists and game is not paused
             if (player != null && !isPaused) {
@@ -164,6 +217,9 @@ public class GameController {
             if (newVal == null) return;
             
             System.out.println("Canvas height changed: " + oldVal + " -> " + newVal);
+            if (effectsManager != null) {
+                effectsManager.resize(gameCanvas.getWidth(), newVal.doubleValue());
+            }
             
             // Force rendering if player exists and game is not paused
             if (player != null && !isPaused) {
@@ -188,44 +244,42 @@ public class GameController {
     }
     
     private void createPauseMenu() {
-        pauseMenu = new javafx.scene.layout.VBox(10);
-        pauseMenu.setAlignment(javafx.geometry.Pos.CENTER);
-        pauseMenu.setStyle("-fx-background-color: rgba(0, 0, 0, 0.7); -fx-padding: 20px;");
-        pauseMenu.setPrefWidth(300);
-        pauseMenu.setPrefHeight(200);
-        
-        // Create title
-        javafx.scene.text.Text title = new javafx.scene.text.Text("Paused");
-        title.setFont(javafx.scene.text.Font.font("Verdana", javafx.scene.text.FontWeight.BOLD, 24));
-        title.setFill(javafx.scene.paint.Color.WHITE);
-        
-        // Create buttons
-        javafx.scene.control.Button resumeButton = new javafx.scene.control.Button("Resume Game");
-        resumeButton.setPrefWidth(200);
-        resumeButton.setOnAction(e -> resumeGame());
-        
-        javafx.scene.control.Button optionsButton = new javafx.scene.control.Button("Options");
-        optionsButton.setPrefWidth(200);
-        optionsButton.setOnAction(e -> showOptions());
-        
-        javafx.scene.control.Button exitButton = new javafx.scene.control.Button("Exit to Main Menu");
-        exitButton.setPrefWidth(200);
-        exitButton.setOnAction(e -> exitToMainMenu());
-        
-        // Add components to menu
-        pauseMenu.getChildren().addAll(title, resumeButton, optionsButton, exitButton);
-        
-        
-        
-        // Initially hide the pause menu
-        pauseMenu.setVisible(false);
-        
-        // Add to canvasContainer instead of rootPane
-        canvasContainer.getChildren().add(pauseMenu);
-        
-        // Ensure the menu stays on top
-        StackPane.setAlignment(pauseMenu, Pos.CENTER);
-    }
+    pauseMenu = new javafx.scene.layout.VBox(10);
+    pauseMenu.setAlignment(javafx.geometry.Pos.CENTER);
+    pauseMenu.setStyle("-fx-background-color: rgba(0, 0, 0, 0.7); -fx-padding: 20px;");
+    pauseMenu.setPrefWidth(300);
+    pauseMenu.setPrefHeight(250);
+
+    // Create title
+    javafx.scene.text.Text title = new javafx.scene.text.Text("Paused");
+    title.setFont(javafx.scene.text.Font.font("Verdana", javafx.scene.text.FontWeight.BOLD, 24));
+    title.setFill(javafx.scene.paint.Color.WHITE);
+
+    // Create buttons
+    javafx.scene.control.Button resumeButton = new javafx.scene.control.Button("Resume Game");
+    resumeButton.setPrefWidth(200);
+    resumeButton.setOnAction(e -> resumeGame());
+
+    javafx.scene.control.Button optionsButton = new javafx.scene.control.Button("Options");
+    optionsButton.setPrefWidth(200);
+    optionsButton.setOnAction(e -> showOptions());
+
+    javafx.scene.control.Button exitButton = new javafx.scene.control.Button("Exit to Main Menu");
+    exitButton.setPrefWidth(200);
+    exitButton.setOnAction(e -> exitToMainMenu());
+
+    // Add components to menu
+    pauseMenu.getChildren().addAll(title, resumeButton, optionsButton, exitButton);
+
+    // Initially hide the pause menu
+    pauseMenu.setVisible(false);
+
+    // Add to canvasContainer instead of rootPane
+    canvasContainer.getChildren().add(pauseMenu);
+
+    // Ensure the menu stays on top
+    StackPane.setAlignment(pauseMenu, Pos.CENTER);
+}
     
     private void togglePauseGame() {
         isPaused = !isPaused;
@@ -319,10 +373,36 @@ public class GameController {
             e.printStackTrace();
         }
     }
-    
+
+   private void showChat(Window owner) {
+    try {
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/dungeon/fxml/Chat.fxml"));
+        Parent chatRoot = loader.load();
+        Scene chatScene = new Scene(chatRoot);
+        Stage chatStage = new Stage();
+        chatStage.setTitle("Game Chat");
+        // Do NOT set modality, so the chat window is non-modal and can appear over the puzzle modal
+        if (owner != null) {
+            chatStage.initOwner(owner);
+        }
+        chatStage.setScene(chatScene);
+        chatStage.setResizable(false); // Prevent resizing
+        UIUtils.setStageIcon(chatStage);
+        chatStage.show(); // Use show() instead of showAndWait()
+        chatStage.setAlwaysOnTop(true); // Force always on top
+        chatStage.toFront(); // Bring to front
+    } catch (Exception e) {
+        System.err.println("Error loading Chat.fxml: " + e.getMessage());
+        e.printStackTrace();
+        // Optionally show an error alert to the user here
+    }
+}
     private void exitToMainMenu() {
         System.out.println("Exiting to main menu...");
         soundManager.stopBackgroundMusic();
+        if (weatherSystem != null) {
+            weatherSystem.shutdown();
+        }
         loadMainMenu();
     }
 
@@ -330,6 +410,9 @@ public class GameController {
         try {
             isPaused = false;
             gameLoopRunning = false;
+            if (weatherSystem != null) {
+                weatherSystem.shutdown();
+            }
 
             // Get the current scene and its root pane
             Scene currentScene = gameCanvas.getScene();
@@ -392,6 +475,9 @@ public class GameController {
         roomCleared = false;
         puzzleCompleted = false;
         
+        // Initialize weather system
+        weatherSystem = new WeatherSystem();
+        
         // DEFERRED: startTime = System.currentTimeMillis();
         
         createPauseMenu(); // UI structure, should be fine here
@@ -404,11 +490,11 @@ public class GameController {
 
     private void loadEnemyImages() {
         try {
-            enemyImages.put(Enemy.EnemyType.GOBLIN, new javafx.scene.image.Image(getClass().getResourceAsStream("/com/dungeon/assets/images/goblin.png")));
-            enemyImages.put(Enemy.EnemyType.SKELETON, new javafx.scene.image.Image(getClass().getResourceAsStream("/com/dungeon/assets/images/skeleton.png")));
-            enemyImages.put(Enemy.EnemyType.ORC, new javafx.scene.image.Image(getClass().getResourceAsStream("/com/dungeon/assets/images/orc.png")));
-            enemyImages.put(Enemy.EnemyType.MAGE, new javafx.scene.image.Image(getClass().getResourceAsStream("/com/dungeon/assets/images/mage.png")));
-            enemyImages.put(Enemy.EnemyType.BOSS, new javafx.scene.image.Image(getClass().getResourceAsStream("/com/dungeon/assets/images/boss.png")));
+            enemyImages.put(Enemy.EnemyType.GOBLIN, new javafx.scene.image.Image(getClass().getResourceAsStream("/com/dungeon/assets/images/goblin.gif")));
+            enemyImages.put(Enemy.EnemyType.SKELETON, new javafx.scene.image.Image(getClass().getResourceAsStream("/com/dungeon/assets/images/skeleton.gif")));
+            enemyImages.put(Enemy.EnemyType.ORC, new javafx.scene.image.Image(getClass().getResourceAsStream("/com/dungeon/assets/images/orc.gif")));
+            enemyImages.put(Enemy.EnemyType.MAGE, new javafx.scene.image.Image(getClass().getResourceAsStream("/com/dungeon/assets/images/mage.gif")));
+            enemyImages.put(Enemy.EnemyType.BOSS, new javafx.scene.image.Image(getClass().getResourceAsStream("/com/dungeon/assets/images/boss.gif")));
         } catch (Exception e) {
             System.err.println("Error loading enemy images: " + e.getMessage());
             e.printStackTrace();
@@ -516,16 +602,23 @@ public class GameController {
         }
     }
 
-    private void generatePuzzles() {
-        for (DungeonRoom room : currentDungeon) {
-            if (room.getType() == DungeonRoom.RoomType.PUZZLE) {
-                // Create a random puzzle for each puzzle room
-                puzzles.put(room, Puzzle.createRandomPuzzle());
+   
+private void generatePuzzles() {
+    allPuzzles = Puzzle.loadPuzzlesFromResources();
+    Iterator<Puzzle> puzzleIterator = allPuzzles.iterator();
+
+    for (DungeonRoom room : currentDungeon) {
+        if (room.getType() == DungeonRoom.RoomType.PUZZLE) {
+            if (!puzzleIterator.hasNext()) {
+                // Restart iterator if run out of puzzles
+                puzzleIterator = allPuzzles.iterator();
             }
+            puzzles.put(room, puzzleIterator.next());
         }
     }
+}
 
-    private void setupInputHandling() {
+   private void setupInputHandling() {
         Scene scene = gameCanvas.getScene();
         activeKeys = new HashSet<>();
         
@@ -545,59 +638,76 @@ public class GameController {
         
         // Handle key presses on the canvas
         gameCanvas.setOnKeyPressed(e -> {
-            System.out.println("Key pressed: " + e.getCode() + " | Canvas focused: " + gameCanvas.isFocused());
-            activeKeys.add(e.getCode());
+            if (roomTransitionInProgress || isInventoryOpen) return; // Ignore input during transition or if inventory is open
+            
+            KeyCode code = e.getCode();
+            activeKeys.add(code);
+            
+            // Handle torch toggle
+            if (code == KeyCode.V) {
+                toggleTorch();
+            }
             
             // Handle inventory key
-            if (e.getCode() == KeyCode.I) {
-                System.out.println("I key pressed - Opening inventory");
+            if (code == KeyCode.I) {
                 openInventory();
-            } else if (e.getCode() == KeyCode.F) {  
-                System.out.println("F key pressed - Current room type: " + 
-                    (currentRoom != null ? currentRoom.getType() : "null"));
-                
+            } else if (code == KeyCode.F) {  
                 // Interact with puzzle or door
                 if (currentRoom != null && currentRoom.getType() == DungeonRoom.RoomType.PUZZLE) {
-                    System.out.println("F key pressed in puzzle room - attempting to interact with puzzle");
-                    System.out.println("Puzzle exists: " + (puzzles.get(currentRoom) != null));
                     interactWithPuzzle();
                 } else {
                     // Try to interact with doors
                     checkDoorInteraction();
                 }
-            } else if (e.getCode() == KeyCode.ESCAPE) {
+            } else if (code == KeyCode.ESCAPE) {
                 // Toggle pause menu
                 togglePauseGame();
                 e.consume(); // Consume the event to prevent default JavaFX full-screen exit
+            } else if (code == KeyCode.W && activeKeys.contains(KeyCode.CONTROL)) {
+                // Ctrl+W to change weather manually
+                if (weatherSystem != null) {
+                    WeatherSystem.WeatherType[] weathers = WeatherSystem.WeatherType.values();
+                    WeatherSystem.WeatherType current = weatherSystem.getCurrentWeather();
+                    int currentIndex = 0;
+                    for (int i = 0; i < weathers.length; i++) {
+                        if (weathers[i] == current) {
+                            currentIndex = i;
+                            break;
+                        }
+                    }
+                    int nextIndex = (currentIndex + 1) % weathers.length;
+                    weatherSystem.startWeatherTransition(weathers[nextIndex]);
+                    effectsManager.showFloatingText("Weather: " + weathers[nextIndex].getName(), 
+                        new Point2D(gameCanvas.getWidth() / 2, 100), Color.CYAN);
+                }
             }
             
             // Handle projectile attack with E key
-            if (e.getCode() == KeyCode.E) {
+            if (code == KeyCode.E) {
                 firePlayerProjectile();
             }
             
             // Handle melee attack with Space key
-            if (e.getCode() == KeyCode.SPACE) {
-                // Implement melee attack
+            if (code == KeyCode.SPACE) {
                 attackEnemiesInRange();
             }
             
             // Handle weapon selection with number keys
-            if (e.getCode().isDigitKey()) {
+            if (code.isDigitKey()) {
                 try {
-                    int weaponIndex = Integer.parseInt(e.getCode().getName()) - 1;
+                    int weaponIndex = Integer.parseInt(code.getName()) - 1;
                     if (weaponIndex >= 0 && weaponIndex < 4) {
-                        System.out.println("Digit key pressed: " + e.getCode().getName() + ", weapon index: " + weaponIndex);
                         selectWeapon(weaponIndex);
                     }
                 } catch (NumberFormatException ex) {
-                    System.out.println("Error parsing digit: " + ex.getMessage());
+                    // Ignore parsing errors
                 }
             }
         });
         
         gameCanvas.setOnKeyReleased(e -> {
-            System.out.println("Key released: " + e.getCode());
+            if (roomTransitionInProgress || isInventoryOpen) return; // Ignore input during transition or if inventory is open
+            // System.out.println("Key released: " + e.getCode());
             activeKeys.remove(e.getCode());
         });
         
@@ -622,6 +732,8 @@ public class GameController {
         // Add mouse click handler for shooting and UI interaction
         gameCanvas.setOnMouseClicked(e -> {
             if (player != null) {
+                if (isInventoryOpen) return; // Ignore input when inventory is open
+                if (roomTransitionInProgress) return; // Ignore input during transition
                 // Check if pause button was clicked
                 double buttonSize = 30;
                 double padding = 10;
@@ -684,10 +796,12 @@ public class GameController {
         }
     }
 
-    private void update(double deltaTime) {
+   
+ private void update(double deltaTime) {
         // Debug game state
-        System.out.println("UPDATE CALLED | gameLoopRunning=" + gameLoopRunning + 
-                          " | roomTransitionInProgress=" + roomTransitionInProgress);
+        // System.out.println("UPDATE CALLED | gameLoopRunning=" + gameLoopRunning + 
+        //                   " | roomTransitionInProgress=" + roomTransitionInProgress +
+        //                   " | isInventoryOpen=" + isInventoryOpen);
                           
         // Check if player is initialized
         if (player == null) {
@@ -703,14 +817,16 @@ public class GameController {
             return;
         }
         
-        // Skip update if room transition is in progress
-        if (roomTransitionInProgress) {
+        // Skip update if room transition is in progress or inventory is open
+        if (roomTransitionInProgress || isInventoryOpen) {
             return;
         }
         
+        // Update weather system
+       
         // Debug message for room type
-        String roomType = currentRoom.getType().toString();
-        System.out.println("Current room type: " + roomType + " | Enemies: " + enemies.size() + " | Items: " + roomItems.size() + " | Projectiles: " + playerProjectiles.size());
+        // String roomType = currentRoom.getType().toString();
+        // System.out.println("Current room type: " + roomType + " | Enemies: " + enemies.size() + " | Items: " + roomItems.size() + " | Projectiles: " + playerProjectiles.size());
         
         // Handle player input
         player.handleInput(activeKeys, deltaTime);
@@ -744,6 +860,18 @@ public class GameController {
         
         // Check victory condition
         checkVictoryCondition();
+
+        // Check if we need to show the level up message
+        if (justLeveledUp) {
+            showLevelCompletionMessage();
+            justLeveledUp = false;
+        }
+        
+        // Check statue interaction in puzzle room
+        checkStatueInteraction();
+        
+        // Check spike collision in treasure room
+        checkSpikeCollision();
         
         // Update effects
         effectsManager.update(deltaTime);
@@ -756,8 +884,8 @@ public class GameController {
             Item item = itemIterator.next();
             
             // Debug print
-            System.out.println("Checking item: " + item.getName() + " at " + item.getX() + "," + item.getY());
-            System.out.println("Player position: " + player.getX() + "," + player.getY());
+            // System.out.println("Checking item: " + item.getName() + " at " + item.getX() + "," + item.getY());
+            // System.out.println("Player position: " + player.getX() + "," + player.getY());
 
             // Improved collision detection for items
             Point2D playerCenter = player.getPosition().add(player.getSize() / 2, player.getSize() / 2);
@@ -766,7 +894,7 @@ public class GameController {
 
             // If player is close enough to item
             if (distance < (player.getSize() / 2 + item.getSize() / 2)) {
-                System.out.println("Player picked up: " + item.getName());
+                // System.out.println("Player picked up: " + item.getName());
                 soundManager.playSound("start"); // Changed from "character" to "start"
                 
                 // Handle item pickup based on type
@@ -816,6 +944,26 @@ public class GameController {
                 // Remove item from room
                 itemIterator.remove();
                 itemsPickedUp = true;
+                
+                // Track equipment collection in treasure room
+                if (currentRoom != null && currentRoom.getType() == DungeonRoom.RoomType.TREASURE) {
+                    equipmentCollected++;
+                    System.out.println("Equipment collected: " + equipmentCollected + "/" + totalEquipmentInRoom);
+                    
+                    // Turn on lights when 2 out of 3 equipment items are collected
+                    if (equipmentCollected >= 2 && !treasureRoomLighted) {
+                        treasureRoomLighted = true;
+                        
+                        // Re-enable weather changes after collecting 2 equipment items
+                        if (weatherSystem != null) {
+                            weatherSystem.setWeatherChangesAllowed(true);
+                        }
+                        
+                        effectsManager.showFloatingText("Lights restored!", 
+                            new Point2D(gameCanvas.getWidth() / 2, gameCanvas.getHeight() / 2), Color.YELLOW);
+                        soundManager.playSound("start");
+                    }
+                }
             }
         }
         // If in treasure room, and all items are picked up, mark treasureClearedInLevel and update doors
@@ -839,28 +987,9 @@ public class GameController {
             for (Door door : doors) {
                 if (isPlayerTouchingDoor(door)) {
                     if (door.isLocked()) {
-                        if (door.requiresKey()) {
-                            // Show message that door requires a key
-                            effectsManager.showFloatingText("This door requires a key", 
-                                new Point2D(door.getX() + door.getWidth()/2, door.getY() - 20), 
-                                Color.YELLOW);
-                        } else {
-                            // Show message about what's needed to unlock the door
-                            String message = "";
-                            switch (currentRoom.getType()) {
-                                case COMBAT:
-                                    message = "Defeat all enemies to unlock";
-                                    break;
-                                case BOSS:
-                                    message = "Defeat the boss to unlock";
-                                    break;
-                                default:
-                                    message = "This door is locked";
-                            }
-                            effectsManager.showFloatingText(message, 
-                                new Point2D(door.getX() + door.getWidth()/2, door.getY() - 20), 
-                                Color.RED);
-                        }
+                        // Show simple "locked" message for all locked doors
+                        Point2D textPosition = calculateSafeTextPosition(door);
+                        effectsManager.showFloatingText("locked", textPosition, Color.RED);
                     }
                     // If door is unlocked, the transition will be handled in checkRoomTransition
                 }
@@ -868,6 +997,23 @@ public class GameController {
             // Remove the key press to prevent multiple interactions
             activeKeys.remove(KeyCode.F);
         }
+    }
+    
+    private Point2D calculateSafeTextPosition(Door door) {
+        double textX = door.getX() + door.getWidth() / 2;
+        double textY = door.getY() - 20; // Default position above door
+        
+        // Ensure text stays within canvas bounds
+        double minY = 30; // Minimum Y to keep text visible
+        double maxY = gameCanvas.getHeight() - 30; // Maximum Y to keep text visible
+        
+        if (textY < minY) {
+            textY = door.getY() + door.getHeight() + 20; // Show below door instead
+        } else if (textY > maxY) {
+            textY = door.getY() - 20; // Keep above door
+        }
+        
+        return new Point2D(textX, textY);
     }
     
     private boolean isPlayerTouchingDoor(Door door) {
@@ -889,13 +1035,18 @@ public class GameController {
     
     private void checkRoomClearConditions() {
         if (currentRoom == null || roomCleared) return;
-        System.out.println("Checking room clear conditions - Room type: " + currentRoom.getType() + 
-                          ", Rooms cleared: " + roomsClearedInLevel + 
-                          ", Current level: " + currentLevel + 
-                          ", awaiting level up: " + awaitingLevelUp);
+        // System.out.println("Checking room clear conditions - Room type: " + currentRoom.getType() + 
+        //                   ", Rooms cleared: " + roomsClearedInLevel + 
+        //                   ", Current level: " + currentLevel + 
+        //                   ", awaiting level up: " + awaitingLevelUp);
         switch (currentRoom.getType()) {
             case COMBAT:
                 if (enemies.isEmpty() || enemies.stream().allMatch(enemy -> enemy.getHealth() <= 0)) {
+                    if (currentWave < totalWaves) {
+                        currentWave++;
+                        effectsManager.showFloatingText("Second Wave!", new Point2D(gameCanvas.getWidth() / 2, 80), Color.GOLD);
+                        spawnCombatWave(currentWave);
+                    } else {
                     roomCleared = true;
                     roomsClearedInLevel++;
                     System.out.println("Combat room cleared! Total rooms cleared: " + roomsClearedInLevel + 
@@ -923,8 +1074,8 @@ public class GameController {
                             Door spawnDoor = new Door(doorX, doorY, doorWidth, doorHeight, currentRoom, spawnRoom, Door.DoorDirection.WEST);
                             spawnDoor.setLocked(false);
                             doors.add(spawnDoor);
-                            effectsManager.showFloatingText("Return to spawn room!", new Point2D(doorX + doorWidth/2, doorY - 20), Color.YELLOW);
                             System.out.println("Created spawn door at: " + doorX + "," + doorY);
+                            }
                         }
                     }
                 }
@@ -965,63 +1116,179 @@ public class GameController {
         // Draw the room background with appropriate lighting
         drawRoomBackground(gc);
         
-        // Draw the room doors with animations
+        // Draw statue in puzzle room
+        if (currentRoom != null && currentRoom.getType() == DungeonRoom.RoomType.PUZZLE && statueVisible && statueImage != null) {
+            gc.drawImage(statueImage, 
+                statuePosition.getX() - STATUE_SIZE/2, 
+                statuePosition.getY() - STATUE_SIZE/2, 
+                STATUE_SIZE, STATUE_SIZE);
+        }
+        
+        // Apply darkness overlay for treasure room when not lighted
+        if (currentRoom != null && currentRoom.getType() == DungeonRoom.RoomType.TREASURE && !treasureRoomLighted) {
+            // Apply a dark overlay similar to weather darkness effect
+            // This makes the room completely dark except for the torch light area
+            gc.setFill(Color.rgb(0, 0, 0, 1.0)); // 100% opacity black overlay - completely invisible
+            gc.fillRect(0, 0, gameCanvas.getWidth(), gameCanvas.getHeight());
+            
+            // If torch is active, draw the light area on top of the darkness
+            if (torchActive && player != null) {
+                Point2D lightCenter = new Point2D(player.getPosition().getX() + player.getSize()/2, 
+                                                 player.getPosition().getY() + player.getSize()/2);
+                
+                // Draw the torch light area with a radial gradient effect
+                // Use multiple circles with decreasing opacity to create a realistic light effect
+                
+                // Outer circle (dim light)
+                gc.setFill(Color.rgb(255, 255, 200, 0.1));
+                gc.fillOval(
+                    lightCenter.getX() - TORCH_LIGHT_RADIUS,
+                    lightCenter.getY() - TORCH_LIGHT_RADIUS,
+                    TORCH_LIGHT_RADIUS * 2,
+                    TORCH_LIGHT_RADIUS * 2
+                );
+                
+                // Draw middle circle (medium light)
+                gc.setFill(Color.rgb(255, 255, 200, 0.3));
+                gc.fillOval(
+                    lightCenter.getX() - TORCH_LIGHT_RADIUS * 0.7,
+                    lightCenter.getY() - TORCH_LIGHT_RADIUS * 0.7,
+                    TORCH_LIGHT_RADIUS * 1.4,
+                    TORCH_LIGHT_RADIUS * 1.4
+                );
+                
+                // Draw inner circle (bright light)
+                gc.setFill(Color.rgb(255, 255, 200, 0.5));
+                gc.fillOval(
+                    lightCenter.getX() - TORCH_LIGHT_RADIUS * 0.3,
+                    lightCenter.getY() - TORCH_LIGHT_RADIUS * 0.3,
+                    TORCH_LIGHT_RADIUS * 0.6,
+                    TORCH_LIGHT_RADIUS * 0.6
+                );
+            }
+        }
+        
+        // Draw the room doors with animations AFTER darkness overlay (so they're visible in torch light)
         renderDoorsWithAnimations(gc);
         
-        // Draw room items
+        // Draw torch in treasure room AFTER darkness overlay (so it's visible in dark room)
+        if (currentRoom != null && currentRoom.getType() == DungeonRoom.RoomType.TREASURE && torchActive && torchImage != null && player != null) {
+            // Draw torch near player
+            Point2D playerPos = player.getPosition();
+            gc.drawImage(torchImage, 
+                playerPos.getX() + player.getSize() - TORCH_SIZE/2, 
+                playerPos.getY() - TORCH_SIZE/2, 
+                TORCH_SIZE, TORCH_SIZE);
+        }
+        
+        // Draw room items AFTER darkness overlay (so they're visible in torch light)
         for (Item item : roomItems) {
-            // Draw item as a circle with color based on type
-            gc.setFill(getItemColor(item.getType()));
-            gc.fillOval(item.getX() - item.getSize()/2, item.getY() - item.getSize()/2, 
-                        item.getSize(), item.getSize());
+            // In treasure room, only show items if torch is active and item is within light radius
+            if (currentRoom != null && currentRoom.getType() == DungeonRoom.RoomType.TREASURE && !treasureRoomLighted) {
+                if (!torchActive || player == null) {
+                    continue; // Skip rendering if torch is not active
+                }
+                
+                Point2D lightCenter = new Point2D(player.getPosition().getX() + player.getSize()/2, 
+                                                 player.getPosition().getY() + player.getSize()/2);
+                double distance = lightCenter.distance(new Point2D(item.getX(), item.getY()));
+                
+                if (distance > TORCH_LIGHT_RADIUS) {
+                    continue; // Skip rendering if item is outside light radius
+                }
+            }
             
-            // Draw item outline
+            javafx.scene.image.Image itemImage = null;
+            switch (item.getType()) {
+                case POTION:
+                    itemImage = new javafx.scene.image.Image(getClass().getResourceAsStream("/com/dungeon/assets/images/potion.png"));
+                    break;
+                case ARMOR:
+                    itemImage = new javafx.scene.image.Image(getClass().getResourceAsStream("/com/dungeon/assets/images/armor.png"));
+                    break;
+                case KEY:
+                    itemImage = new javafx.scene.image.Image(getClass().getResourceAsStream("/com/dungeon/assets/images/key.png"));
+                    break;
+                case WEAPON:
+                    if (item instanceof Weapon) {
+                        Weapon.WeaponType type = ((Weapon) item).getWeaponType();
+                        itemImage = weaponImages.get(type);
+                    }
+                    break;
+                default:
+                    break;
+            }
+            double renderItemSize = item.getSize() * 3.0;
+            if (itemImage != null) {
+                gc.drawImage(itemImage, item.getX() - renderItemSize/2, item.getY() - renderItemSize/2, renderItemSize, renderItemSize);
+            } else {
+                // Fallback: draw as a circle
+            gc.setFill(getItemColor(item.getType()));
+                gc.fillOval(item.getX() - renderItemSize/2, item.getY() - renderItemSize/2, renderItemSize, renderItemSize);
             gc.setStroke(Color.BLACK);
             gc.setLineWidth(1);
-            gc.strokeOval(item.getX() - item.getSize()/2, item.getY() - item.getSize()/2, 
-                        item.getSize(), item.getSize());
-            
+                gc.strokeOval(item.getX() - renderItemSize/2, item.getY() - renderItemSize/2, renderItemSize, renderItemSize);
+            }
             // Draw item name when player is close
-            if (player != null && 
-                player.getPosition().distance(new Point2D(item.getX(), item.getY())) < 100) {
+            if (player != null && player.getPosition().distance(new Point2D(item.getX(), item.getY())) < 100) {
                 gc.setFill(Color.WHITE);
                 gc.setFont(Font.font("Verdana", FontWeight.NORMAL, 10));
-                gc.setTextAlign(TextAlignment.CENTER); // Center align text
-                gc.fillText(item.getName(), 
-                    item.getX(), // Center X position
-                    item.getY() - 10); // Position above item
+                gc.setTextAlign(TextAlignment.CENTER);
+                gc.fillText(item.getName(), item.getX(), item.getY() - renderItemSize/2 - 10);
+            }
+        }
+        
+        // Draw spikes in treasure room
+        if (currentRoom != null && currentRoom.getType() == DungeonRoom.RoomType.TREASURE && !treasureRoomLighted) {
+            Point2D playerPos = player != null ? player.getPosition() : null;
+            
+            for (Point2D spikePos : spikePositions) {
+                // Only show spikes if torch is active and spike is within light radius
+                if (torchActive && playerPos != null) {
+                    Point2D lightCenter = new Point2D(playerPos.getX() + player.getSize()/2, 
+                                                     playerPos.getY() + player.getSize()/2);
+                    double distance = lightCenter.distance(spikePos);
+                    
+                    if (distance <= TORCH_LIGHT_RADIUS) {
+                        // Draw spike as a red triangle
+                        gc.setFill(Color.RED);
+                        gc.setStroke(Color.DARKRED);
+                        gc.setLineWidth(2);
+                        
+                        double[] xPoints = {spikePos.getX(), spikePos.getX() - SPIKE_SIZE/2, spikePos.getX() + SPIKE_SIZE/2};
+                        double[] yPoints = {spikePos.getY() - SPIKE_SIZE/2, spikePos.getY() + SPIKE_SIZE/2, spikePos.getY() + SPIKE_SIZE/2};
+                        
+                        gc.fillPolygon(xPoints, yPoints, 3);
+                        gc.strokePolygon(xPoints, yPoints, 3);
+                    }
+                }
             }
         }
         
         // Draw enemies
         if (enemies.isEmpty()) {
-            System.out.println("No enemies to render in current room");
+            // System.out.println("No enemies to render in current room");
         } else {
-            System.out.println("Rendering " + enemies.size() + " enemies");
+            // System.out.println("Rendering " + enemies.size() + " enemies");
             for (Enemy enemy : enemies) {
-                System.out.println("Rendering enemy at: " + enemy.getX() + "," + enemy.getY() + " of type: " + enemy.getType());
+                // System.out.println("Rendering enemy at: " + enemy.getX() + "," + enemy.getY() + " of type: " + enemy.getType());
                 
                 // Get the enemy image
                 javafx.scene.image.Image enemyImage = enemyImages.get(enemy.getType());
                 if (enemyImage != null) {
                     // Calculate enemy size
                     double size = enemy.getSize();
+                    // Increase size by 2x for normal enemies, 3x for boss
                 if (enemy.getType() == Enemy.EnemyType.BOSS) {
-                        size *= 1.5; // Make boss larger
+                        size *= 3.0;
+                    } else {
+                        size *= 2.0;
                     }
-                    
-                    // Calculate rotation angle based on movement direction
-                    double angle = 0;
+                    // Calculate horizontal flip based on movement direction (like player)
+                    double scaleX = 1;
                     Point2D velocity = enemy.getVelocity();
-                    if (velocity != null && (Math.abs(velocity.getX()) > 0.1 || Math.abs(velocity.getY()) > 0.1)) {
-                        // Calculate angle based on velocity direction
-                        angle = Math.toDegrees(Math.atan2(velocity.getY(), velocity.getX()));
-                } else {
-                        // If no significant velocity, calculate angle based on direction to player
-                        Point2D playerCenter = player.getPosition().add(player.getSize() / 2, player.getSize() / 2);
-                        Point2D enemyCenter = enemy.getPosition().add(enemy.getSize() / 2, enemy.getSize() / 2);
-                        Point2D direction = playerCenter.subtract(enemyCenter);
-                        angle = Math.toDegrees(Math.atan2(direction.getY(), direction.getX()));
+                    if (velocity != null && velocity.getX() < -0.1) {
+                        scaleX = -1; // Flip horizontally if moving left
                     }
                     
                     // Save the current graphics context state
@@ -1029,15 +1296,10 @@ public class GameController {
                     
                     // Translate to enemy center
                     gc.translate(enemy.getX() + enemy.getSize()/2, enemy.getY() + enemy.getSize()/2);
-                    
-                    // Rotate around the center
-                    gc.rotate(angle);
+                    gc.scale(scaleX, 1);
                     
                     // Draw enemy image centered
-                    gc.drawImage(enemyImage, 
-                        -size/2, 
-                        -size/2, 
-                        size, size);
+                    gc.drawImage(enemyImage, -size/2, -size/2, size, size);
                     
                     // Restore the graphics context state
                     gc.restore();
@@ -1068,10 +1330,10 @@ public class GameController {
                     // Fallback to colored rectangle if image not found
                     if (enemy.getType() == Enemy.EnemyType.BOSS) {
                         gc.setFill(Color.DARKRED);
-                        gc.fillRect(enemy.getX() - 5, enemy.getY() - 5, enemy.getSize() + 10, enemy.getSize() + 10);
+                        gc.fillRect(enemy.getX() - 5, enemy.getY() - 5, enemy.getSize() * 3.0 + 10, enemy.getSize() * 3.0 + 10);
                     } else {
                         gc.setFill(Color.RED);
-                        gc.fillRect(enemy.getX(), enemy.getY(), enemy.getSize(), enemy.getSize());
+                        gc.fillRect(enemy.getX(), enemy.getY(), enemy.getSize() * 2.0, enemy.getSize() * 2.0);
                     }
                 }
             }
@@ -1092,334 +1354,94 @@ public class GameController {
             player.render(gc);
         }
         
+        // Render weather effects (on top of everything)
+        if (weatherSystem != null) {
+            weatherSystem.render(gc, gameCanvas.getWidth(), gameCanvas.getHeight());
+        }
+        
         // Draw UI elements
         renderUI(gc);
     }
     
-    private void drawPauseButton(GraphicsContext gc) {
-        // Draw pause button in top-right corner
-        double buttonSize = 30;
-        double padding = 10;
-        double x = gameCanvas.getWidth() - buttonSize - padding;
-        double y = padding;
-        
-        // Draw button background
-        gc.setFill(Color.DARKGRAY);
-        gc.fillRoundRect(x, y, buttonSize, buttonSize, 5, 5);
-        
-        // Draw pause icon
-        gc.setFill(Color.WHITE);
-        gc.fillRect(x + buttonSize * 0.3, y + buttonSize * 0.25, buttonSize * 0.15, buttonSize * 0.5);
-        gc.fillRect(x + buttonSize * 0.55, y + buttonSize * 0.25, buttonSize * 0.15, buttonSize * 0.5);
-        
-        // Draw button border
-        gc.setStroke(Color.WHITE);
-        gc.setLineWidth(1);
-        gc.strokeRoundRect(x, y, buttonSize, buttonSize, 5, 5);
-    }
-    
     private void drawRoomBackground(GraphicsContext gc) {
+        if (!backgroundsLoaded) {
+            // Load background images once
+            combatBgImage = new Image(getClass().getResourceAsStream("/com/dungeon/assets/images/combat.jpg"));
+            treasureBgImage = new Image(getClass().getResourceAsStream("/com/dungeon/assets/images/treasure.jpg"));
+            puzzleBgImage = new Image(getClass().getResourceAsStream("/com/dungeon/assets/images/puzzle.jpg"));
+            spawnBgImage = new Image(getClass().getResourceAsStream("/com/dungeon/assets/images/spawn.jpg"));
+            bossBgImage = new Image(getClass().getResourceAsStream("/com/dungeon/assets/images/boss.jpg"));
+            statueImage = new Image(getClass().getResourceAsStream("/com/dungeon/assets/images/statue.gif"));
+            torchImage = new Image(getClass().getResourceAsStream("/com/dungeon/assets/images/torch.gif"));
+            backgroundsLoaded = true;
+        }
         if (currentRoom == null) {
             System.err.println("ERROR: Cannot draw room background - currentRoom is null");
             gc.setFill(Color.BLACK);
             gc.fillRect(0, 0, gameCanvas.getWidth(), gameCanvas.getHeight());
             return;
         }
-        
-        System.out.println("Drawing background for room type: " + currentRoom.getType());
-        
-        // Set the base background color based on room type
-        Color baseColor;
-        switch (currentRoom.getType()) {
-            case SPAWN:
-                baseColor = Color.rgb(0, 80, 0); // Dark green for spawn
-                break;
-            case COMBAT:
-                baseColor = Color.rgb(70, 30, 30); // Dark red for combat
-                break;
-            case PUZZLE:
-                baseColor = Color.rgb(30, 30, 80); // Dark blue for puzzle
-                break;
-            case TREASURE:
-                baseColor = Color.rgb(80, 80, 30); // Gold for treasure
-                break;
-            case BOSS:
-                baseColor = Color.rgb(80, 0, 0); // Deep red for boss
-                break;
-            default:
-                baseColor = Color.rgb(30, 30, 30); // Dark gray default
-                break;
-        }
-        
-        // Fill the entire canvas with the base color
-        gc.setFill(baseColor);
-        gc.fillRect(0, 0, gameCanvas.getWidth(), gameCanvas.getHeight());
-        
-        // Draw floor tiles based on room type
-        double tileSize = 40;
-        
+        // Draw the background image for the room type
+        Image bgImage = null;
         switch (currentRoom.getType()) {
             case COMBAT:
-                drawCombatRoomFloor(gc, tileSize);
-                break;
-            case PUZZLE:
-                drawPuzzleRoomFloor(gc, tileSize);
+                bgImage = combatBgImage;
                 break;
             case TREASURE:
-                drawTreasureRoomFloor(gc, tileSize);
+                // Only show background if room is lighted, otherwise keep it dark
+                if (treasureRoomLighted) {
+                bgImage = treasureBgImage;
+                }
                 break;
-            case BOSS:
-                drawBossRoomFloor(gc, tileSize);
+            case PUZZLE:
+                bgImage = puzzleBgImage;
                 break;
             case SPAWN:
+                bgImage = spawnBgImage;
+                break;
+            case BOSS:
+                bgImage = bossBgImage;
+                break;
             default:
-                drawSpawnRoomFloor(gc, tileSize);
                 break;
         }
-        
-        // Draw room borders
+        if (bgImage != null) {
+            gc.drawImage(bgImage, 0, 0, gameCanvas.getWidth(), gameCanvas.getHeight());
+        } else {
+            // Fallback to color for other room types or dark treasure room
+            Color baseColor;
+            if (currentRoom.getType() == DungeonRoom.RoomType.TREASURE && !treasureRoomLighted) {
+                baseColor = Color.BLACK; // Completely dark for treasure room
+            } else {
+        switch (currentRoom.getType()) {
+                case SPAWN:
+                    baseColor = Color.rgb(0, 80, 0); // Dark green for spawn
+                break;
+            case BOSS:
+                    baseColor = Color.rgb(80, 0, 0); // Deep red for boss
+                break;
+            default:
+                    baseColor = Color.rgb(30, 30, 30); // Dark gray default
+                break;
+                }
+        }
+            gc.setFill(baseColor);
+            gc.fillRect(0, 0, gameCanvas.getWidth(), gameCanvas.getHeight());
+        }
+        // Draw room borders for all rooms
         gc.setStroke(Color.DARKGRAY);
         gc.setLineWidth(5);
         gc.strokeRect(10, 10, gameCanvas.getWidth() - 20, gameCanvas.getHeight() - 20);
     }
     
-    private void drawCombatRoomFloor(GraphicsContext gc, double tileSize) {
-        // Checkered pattern in dark red
-        for (int x = 0; x < gameCanvas.getWidth(); x += tileSize) {
-            for (int y = 0; y < gameCanvas.getHeight(); y += tileSize) {
-                if ((x / tileSize + y / tileSize) % 2 == 0) {
-                    gc.setFill(Color.rgb(60, 20, 20));
-                } else {
-                    gc.setFill(Color.rgb(40, 10, 10));
-                }
-                gc.fillRect(x, y, tileSize, tileSize);
-            }
-        }
-        
-        // Add some blood stains
-        gc.setFill(Color.rgb(120, 0, 0, 0.3));
-        for (int i = 0; i < 10; i++) {
-            double x = random.nextDouble() * gameCanvas.getWidth();
-            double y = random.nextDouble() * gameCanvas.getHeight();
-            double size = 20 + random.nextDouble() * 30;
-            gc.fillOval(x, y, size, size);
-        }
-    }
-    
-    private void drawPuzzleRoomFloor(GraphicsContext gc, double tileSize) {
-        // Blue tiled pattern with symbols
-        for (int x = 0; x < gameCanvas.getWidth(); x += tileSize) {
-            for (int y = 0; y < gameCanvas.getHeight(); y += tileSize) {
-                gc.setFill(Color.rgb(20, 30, 50));
-                gc.fillRect(x, y, tileSize, tileSize);
-                
-                // Add tile borders
-                gc.setStroke(Color.rgb(30, 40, 70));
-                gc.strokeRect(x, y, tileSize, tileSize);
-            }
-        }
-        
-        // Add arcane symbols
-        gc.setFill(Color.rgb(100, 150, 255, 0.2));
-        for (int i = 0; i < 8; i++) {
-            double x = random.nextDouble() * gameCanvas.getWidth();
-            double y = random.nextDouble() * gameCanvas.getHeight();
-            double size = 30 + random.nextDouble() * 40;
-            
-            // Draw a random arcane symbol (simplified)
-            double angle = random.nextDouble() * Math.PI * 2;
-            double[] xPoints = new double[5];
-            double[] yPoints = new double[5];
-            
-            for (int j = 0; j < 5; j++) {
-                xPoints[j] = x + Math.cos(angle + j * Math.PI * 2 / 5) * size / 2;
-                yPoints[j] = y + Math.sin(angle + j * Math.PI * 2 / 5) * size / 2;
-            }
-            
-            gc.fillPolygon(xPoints, yPoints, 5);
-        }
-    }
-    
-    private void drawTreasureRoomFloor(GraphicsContext gc, double tileSize) {
-        // Gold/yellow tiled pattern
-        for (int x = 0; x < gameCanvas.getWidth(); x += tileSize) {
-            for (int y = 0; y < gameCanvas.getHeight(); y += tileSize) {
-                if ((x / tileSize + y / tileSize) % 2 == 0) {
-                    gc.setFill(Color.rgb(80, 70, 20));
-                } else {
-                    gc.setFill(Color.rgb(60, 50, 10));
-                }
-                gc.fillRect(x, y, tileSize, tileSize);
-            }
-        }
-        
-        // Add gold coins scattered around
-        gc.setFill(Color.GOLD);
-        for (int i = 0; i < 30; i++) {
-            double x = random.nextDouble() * gameCanvas.getWidth();
-            double y = random.nextDouble() * gameCanvas.getHeight();
-            double size = 3 + random.nextDouble() * 5;
-            gc.fillOval(x, y, size, size);
-        }
-    }
-    
-    private void drawBossRoomFloor(GraphicsContext gc, double tileSize) {
-        // Dark pattern with lava cracks
-        for (int x = 0; x < gameCanvas.getWidth(); x += tileSize) {
-            for (int y = 0; y < gameCanvas.getHeight(); y += tileSize) {
-                gc.setFill(Color.rgb(30, 10, 10));
-                gc.fillRect(x, y, tileSize, tileSize);
-            }
-        }
-        
-        // Add lava cracks
-        gc.setFill(Color.rgb(255, 50, 0, 0.7));
-        for (int i = 0; i < 15; i++) {
-            double x = random.nextDouble() * gameCanvas.getWidth();
-            double y = random.nextDouble() * gameCanvas.getHeight();
-            double width = 5 + random.nextDouble() * 100;
-            double height = 3 + random.nextDouble() * 5;
-            double angle = random.nextDouble() * Math.PI;
-            
-            gc.save();
-            gc.translate(x, y);
-            gc.rotate(Math.toDegrees(angle));
-            gc.fillRect(-width/2, -height/2, width, height);
-            gc.restore();
-        }
-    }
-    
-    private void drawSpawnRoomFloor(GraphicsContext gc, double tileSize) {
-        // Green/brown natural pattern
-        for (int x = 0; x < gameCanvas.getWidth(); x += tileSize) {
-            for (int y = 0; y < gameCanvas.getHeight(); y += tileSize) {
-                if ((x / tileSize + y / tileSize) % 2 == 0) {
-                    gc.setFill(Color.rgb(30, 50, 30));
-                } else {
-                    gc.setFill(Color.rgb(40, 60, 40));
-                }
-                gc.fillRect(x, y, tileSize, tileSize);
-            }
-        }
-    }
-    
-    private void updateLighting() {
-        if (lightingEffect == null) {
-            return;
-        }
-        
-        // Clear previous lights
-        lightingEffect.clearLights();
-        
-        // Set ambient light based on room type
-        switch (currentRoom.getType()) {
-            case COMBAT:
-                lightingEffect.setAmbientLight(0.3); // Dim red lighting
-                break;
-                
-            case PUZZLE:
-                lightingEffect.setAmbientLight(0.4); // Moderate blue lighting
-                break;
-                
-            case TREASURE:
-                lightingEffect.setAmbientLight(0.5); // Brighter gold lighting
-                break;
-                
-            case BOSS:
-                lightingEffect.setAmbientLight(0.2); // Very dark with red tint
-                break;
-                
-            case SPAWN:
-            default:
-                lightingEffect.setAmbientLight(0.6); // Bright natural lighting
-                break;
-        }
-        
-        // Add player light
-        lightingEffect.addLightSource(
-            player.getPosition(), 
-            150, 
-            Color.WHITE, 
-            LightingEffect.LightSource.LightType.FLICKERING
-        );
-        
-        // Add door lights
-        for (Door door : doors) {
-            Color lightColor = door.isLocked() ? Color.RED : Color.GREEN;
-            lightingEffect.addLightSource(
-                new Point2D(door.getX() + door.getWidth()/2, door.getY() + door.getHeight()/2),
-                60,
-                lightColor,
-                LightingEffect.LightSource.LightType.PULSING
-            );
-        }
-        
-        // Add item lights
-        for (Item item : roomItems) {
-            Color itemColor = getItemColor(item.getType());
-            lightingEffect.addLightSource(
-                new Point2D(item.getX(), item.getY()),
-                item.getSize() * 3,
-                itemColor,
-                LightingEffect.LightSource.LightType.PULSING
-            );
-        }
-        
-        // Add enemy lights
-        for (Enemy enemy : enemies) {
-            Color enemyColor = Color.RED;
-            if (enemy.getType() == Enemy.EnemyType.BOSS) {
-                enemyColor = Color.DARKRED;
-            } else if (enemy.getType() == Enemy.EnemyType.MAGE) {
-                enemyColor = Color.BLUE;
-            }
-            
-            lightingEffect.addLightSource(
-                enemy.getPosition(),
-                enemy.getSize() * 2,
-                enemyColor,
-                enemy.getType() == Enemy.EnemyType.BOSS ? 
-                    LightingEffect.LightSource.LightType.PULSING : 
-                    LightingEffect.LightSource.LightType.FLICKERING
-            );
-        }
-        
-        // Add environmental lights based on room type
-        if (currentRoom.getType() == DungeonRoom.RoomType.BOSS) {
-            // Add lava lights for boss room
-            for (int i = 0; i < 5; i++) {
-                double x = random.nextDouble() * gameCanvas.getWidth();
-                double y = random.nextDouble() * gameCanvas.getHeight();
-                lightingEffect.addLightSource(
-                    new Point2D(x, y),
-                    30 + random.nextDouble() * 50,
-                    Color.ORANGE,
-                    LightingEffect.LightSource.LightType.FLICKERING
-                );
-            }
-        } else if (currentRoom.getType() == DungeonRoom.RoomType.PUZZLE) {
-            // Add arcane lights for puzzle room
-            for (int i = 0; i < 4; i++) {
-                double x = 100 + i * (gameCanvas.getWidth() - 200) / 3;
-                double y = gameCanvas.getHeight() / 2;
-                lightingEffect.addLightSource(
-                    new Point2D(x, y),
-                    70,
-                    Color.CYAN,
-                    LightingEffect.LightSource.LightType.PULSING
-                );
-            }
-        }
-    }
-    
-    private void renderUI(GraphicsContext gc) {
+      private void renderUI(GraphicsContext gc) {
         // Set font for UI elements
         gc.setFont(Font.font("Verdana", FontWeight.BOLD, 14));
         
         // Create a semi-transparent background for the stats
         double padding = 10;
         double boxWidth = 200;
-        double boxHeight = 120;
+        double boxHeight = 140; // Increased from 120 to accommodate weather text
         double boxX = padding;
         double boxY = padding;
         
@@ -1472,11 +1494,20 @@ public class GameController {
         gc.fillText("Enemies Defeated: " + enemiesDefeated, 
             healthBarX, healthBarY + healthBarHeight + 75);
         
-        // Controls help at bottom
-        gc.setFill(Color.LIGHTBLUE);
-        gc.setTextAlign(TextAlignment.LEFT);
-        gc.fillText("WASD: Move | E: Shoot | Space: Melee | F: Interact | I: Inventory", 
-            padding, gameCanvas.getHeight() - 20);
+        // Weather display
+        if (weatherSystem != null) {
+            String weatherName = weatherSystem.getWeatherName();
+            gc.setFill(Color.CYAN);
+            gc.fillText("Weather: " + weatherName, 
+                healthBarX, healthBarY + healthBarHeight + 95);
+        }
+        
+        // Add torch controls for treasure room only
+        if (currentRoom != null && currentRoom.getType() == DungeonRoom.RoomType.TREASURE) {
+            gc.setFill(Color.YELLOW);
+            gc.fillText("V: Toggle Torch | Torch: " + (torchActive ? "ON" : "OFF"), 
+                padding, gameCanvas.getHeight() - 20);
+        }
     }
 
     public Player getPlayer() {
@@ -1520,7 +1551,7 @@ public class GameController {
                 Door bossDoor = new Door(doorX, doorY, doorWidth, doorHeight, currentRoom, bossRoom, Door.DoorDirection.EAST);
                 bossDoor.setLocked(false);
                 doors.add(bossDoor);
-                effectsManager.showFloatingText("Return to spawn room!", new Point2D(doorX + doorWidth/2, doorY - 20), Color.YELLOW);
+                
                 System.out.println("Created boss door in spawn room");
                 return;
             }
@@ -1528,7 +1559,7 @@ public class GameController {
             // If player is returning after clearing 3 rooms, level up and reset
             if (awaitingLevelUp) {
                 awaitingLevelUp = false;
-                showLevelCompletionMessage();
+                justLeveledUp = true; // Set flag to show message after transition
                 
                 // Special condition for level 3 - create boss door instead of regular doors
                 if (currentLevel >= 3) {
@@ -1619,13 +1650,14 @@ public class GameController {
                     spawnDoor.setLocked(false);
                     doors.add(spawnDoor);
                     existingDoorPositions.add(new Point2D(doorX, doorY));
-                    effectsManager.showFloatingText("Return to spawn room!", new Point2D(doorX + doorWidth/2, doorY - 20), Color.YELLOW);
+                    
                     System.out.println("Created spawn door at: " + doorX + "," + doorY);
                 }
             }
         }
         System.out.println("Created " + doors.size() + " doors");
     }
+
 
     private void createDoorsForRoomTypes(List<DungeonRoom.RoomType> roomTypes, double roomWidth, double roomHeight, 
                                        double doorWidth, double doorHeight, List<Point2D> existingDoorPositions) {
@@ -1680,33 +1712,6 @@ public class GameController {
         }
     }
 
-    private void createDoorToRoom(DungeonRoom targetRoom, double roomWidth, double roomHeight, 
-                                double doorWidth, double doorHeight, List<Point2D> existingDoorPositions) {
-        // Calculate door position based on direction
-        double doorX, doorY;
-        Door.DoorDirection doorDirection;
-        
-        // Position doors on the right side of the room
-        doorX = roomWidth - doorWidth + 50;
-        doorY = (roomHeight / 2) - (doorHeight / 2) + 50;
-        doorDirection = Door.DoorDirection.EAST;
-        
-        // Create the door
-        Door door = new Door(doorX, doorY, doorWidth, doorHeight, currentRoom, targetRoom, doorDirection);
-        
-        // Lock doors based on room type
-        if (currentRoom.getType() == DungeonRoom.RoomType.COMBAT ||
-            currentRoom.getType() == DungeonRoom.RoomType.BOSS) {
-            door.setLocked(!enemies.isEmpty());
-        } else if (currentRoom.getType() == DungeonRoom.RoomType.PUZZLE) {
-            door.setLocked(!puzzleCompleted);
-            door.setRequiresKey(true);
-        }
-        
-        doors.add(door);
-        existingDoorPositions.add(new Point2D(doorX, doorY));
-    }
-
     private void populateRoom(DungeonRoom room) {
         // Clear existing entities
         enemies.clear();
@@ -1717,6 +1722,9 @@ public class GameController {
         double centerX = gameCanvas.getWidth() / 2;
         double centerY = gameCanvas.getHeight() / 2;
         Point2D roomCenter = new Point2D(centerX, centerY);
+        double minX = 40, minY = 40;
+        double maxX = gameCanvas.getWidth() - 40;
+        double maxY = gameCanvas.getHeight() - 40;
         
         // Adjust difficulty based on level
         double difficultyMultiplier = 1.0 + (currentLevel - 1) * 0.2;
@@ -1728,6 +1736,11 @@ public class GameController {
                 Puzzle puzzle = Puzzle.createRandomPuzzle();
                 puzzles.put(room, puzzle);
                 System.out.println("Created puzzle: " + puzzle.getDescription());
+                
+                // Initialize statue in the center of the room
+                statueVisible = true;
+                statuePosition = new Point2D(gameCanvas.getWidth() / 2, gameCanvas.getHeight() / 2); // Move 50 pixels to the left
+                System.out.println("Statue placed at: " + statuePosition);
                 
                 // Only place key and random item if puzzle is already solved
                 if (puzzle.isSolved()) {
@@ -1744,76 +1757,32 @@ public class GameController {
                 break;
                 
             case TREASURE:
-                System.out.println("Spawning items in treasure room");
+                System.out.println("Populating treasure room...");
                 
-                // Place one weapon
-                double weaponAngle = random.nextDouble() * Math.PI * 2;
-                double weaponDistance = 80;
-                double weaponX = Math.cos(weaponAngle) * weaponDistance;
-                double weaponY = Math.sin(weaponAngle) * weaponDistance;
-                spawnWeapon(roomCenter.add(weaponX, weaponY));
+                // Force clear weather and disable weather changes for treasure room until equipment is collected
+                if (weatherSystem != null) {
+                    weatherSystem.setWeatherChangesAllowed(false);
+                    // Force clear weather immediately
+                    weatherSystem.startWeatherTransition(WeatherSystem.WeatherType.CLEAR);
+                }
                 
-                // Place one armor
-                double armorAngle = weaponAngle + Math.PI * 2/3; // 120 degrees from weapon
-                double armorX = Math.cos(armorAngle) * weaponDistance;
-                double armorY = Math.sin(armorAngle) * weaponDistance;
-                spawnArmor(roomCenter.add(armorX, armorY));
+                // Reset treasure room state
+                equipmentCollected = 0;
+                totalEquipmentInRoom = 3; // Always spawn 3 equipment items
+                treasureRoomLighted = false;
+                torchActive = false;
                 
-                // Place one potion
-                double potionAngle = weaponAngle + Math.PI * 4/3; // 240 degrees from weapon
-                double potionX = Math.cos(potionAngle) * weaponDistance;
-                double potionY = Math.sin(potionAngle) * weaponDistance;
-                spawnPotion(roomCenter.add(potionX, potionY));
+                // Generate spikes and safe areas
+                generateTreasureRoomLayout();
+                
+                // Spawn equipment items in safe areas
+                spawnTreasureRoomEquipment();
+                
                 break;
                 
             case COMBAT:
-                System.out.println("Spawning enemies in combat room for level " + currentLevel);
-                
-                // Spawn enemies based on level pattern
-                switch (currentLevel) {
-                    case 1:
-                        // Level 1: 2 skeletons, 1 goblin, 1 orc
-                        spawnEnemyWithType(roomCenter, Enemy.EnemyType.SKELETON, difficultyMultiplier);
-                        spawnEnemyWithType(roomCenter, Enemy.EnemyType.SKELETON, difficultyMultiplier);
-                        spawnEnemyWithType(roomCenter, Enemy.EnemyType.GOBLIN, difficultyMultiplier);
-                        spawnEnemyWithType(roomCenter, Enemy.EnemyType.ORC, difficultyMultiplier);
-                        break;
-                        
-                    case 2:
-                        // Level 2: 2 goblins, 1 skeleton, 2 orcs
-                        spawnEnemyWithType(roomCenter, Enemy.EnemyType.GOBLIN, difficultyMultiplier);
-                        spawnEnemyWithType(roomCenter, Enemy.EnemyType.GOBLIN, difficultyMultiplier);
-                        spawnEnemyWithType(roomCenter, Enemy.EnemyType.SKELETON, difficultyMultiplier);
-                        spawnEnemyWithType(roomCenter, Enemy.EnemyType.ORC, difficultyMultiplier);
-                        spawnEnemyWithType(roomCenter, Enemy.EnemyType.ORC, difficultyMultiplier);
-                        break;
-                        
-                    case 3:
-                        // Level 3: 3 goblins, 2 mages, 2 orcs
-                        spawnEnemyWithType(roomCenter, Enemy.EnemyType.GOBLIN, difficultyMultiplier);
-                        spawnEnemyWithType(roomCenter, Enemy.EnemyType.GOBLIN, difficultyMultiplier);
-                        spawnEnemyWithType(roomCenter, Enemy.EnemyType.GOBLIN, difficultyMultiplier);
-                        spawnEnemyWithType(roomCenter, Enemy.EnemyType.MAGE, difficultyMultiplier);
-                        spawnEnemyWithType(roomCenter, Enemy.EnemyType.MAGE, difficultyMultiplier);
-                        spawnEnemyWithType(roomCenter, Enemy.EnemyType.ORC, difficultyMultiplier);
-                        spawnEnemyWithType(roomCenter, Enemy.EnemyType.ORC, difficultyMultiplier);
-                        break;
-                        
-                    default:
-                        // For levels beyond 3, use a mix of all enemy types
-                        int totalEnemies = 5 + (currentLevel - 3);
-                        for (int i = 0; i < totalEnemies; i++) {
-                            Enemy.EnemyType[] types = {
-                                Enemy.EnemyType.GOBLIN,
-                                Enemy.EnemyType.SKELETON,
-                                Enemy.EnemyType.ORC,
-                                Enemy.EnemyType.MAGE
-                            };
-                            Enemy.EnemyType randomType = types[random.nextInt(types.length)];
-                            spawnEnemyWithType(roomCenter, randomType, difficultyMultiplier);
-                        }
-                        break;
-                }
+                currentWave = 1;
+                spawnCombatWave(currentWave);
                 break;
                 
             case BOSS:
@@ -1829,6 +1798,65 @@ public class GameController {
         
         // Create doors for the new room
         createDoors();
+    }
+
+    private void spawnCombatWave(int wave) {
+        System.out.println("Spawning wave " + wave + " in combat room for level " + currentLevel);
+        double centerX = gameCanvas.getWidth() / 2;
+        double centerY = gameCanvas.getHeight() / 2;
+        double minX = 40, minY = 40;
+        double maxX = gameCanvas.getWidth() - 40;
+        double maxY = gameCanvas.getHeight() - 40;
+        double difficultyMultiplier = 1.0 + (currentLevel - 1) * 0.2;
+        java.util.List<Point2D> spawnPoints = new java.util.ArrayList<>();
+        spawnPoints.add(new Point2D(minX, minY));
+        spawnPoints.add(new Point2D(maxX, minY));
+        spawnPoints.add(new Point2D(minX, maxY));
+        spawnPoints.add(new Point2D(maxX, maxY));
+        int numEnemies = 0;
+        switch (currentLevel) {
+            case 1: numEnemies = 4; break;
+            case 2: numEnemies = 5; break;
+            case 3: numEnemies = 7; break;
+            default: numEnemies = 5 + (currentLevel - 3); break;
+        }
+        while (spawnPoints.size() < numEnemies) {
+            double rx = minX + random.nextDouble() * (maxX - minX);
+            double ry = minY + random.nextDouble() * (maxY - minY);
+            spawnPoints.add(new Point2D(rx, ry));
+        }
+        int spawnIdx = 0;
+        switch (currentLevel) {
+            case 1:
+                spawnEnemyWithType(spawnPoints.get(spawnIdx++), Enemy.EnemyType.SKELETON, difficultyMultiplier);
+                spawnEnemyWithType(spawnPoints.get(spawnIdx++), Enemy.EnemyType.SKELETON, difficultyMultiplier);
+                spawnEnemyWithType(spawnPoints.get(spawnIdx++), Enemy.EnemyType.GOBLIN, difficultyMultiplier);
+                spawnEnemyWithType(spawnPoints.get(spawnIdx++), Enemy.EnemyType.ORC, difficultyMultiplier);
+                break;
+            case 2:
+                spawnEnemyWithType(spawnPoints.get(spawnIdx++), Enemy.EnemyType.GOBLIN, difficultyMultiplier);
+                spawnEnemyWithType(spawnPoints.get(spawnIdx++), Enemy.EnemyType.GOBLIN, difficultyMultiplier);
+                spawnEnemyWithType(spawnPoints.get(spawnIdx++), Enemy.EnemyType.SKELETON, difficultyMultiplier);
+                spawnEnemyWithType(spawnPoints.get(spawnIdx++), Enemy.EnemyType.ORC, difficultyMultiplier);
+                spawnEnemyWithType(spawnPoints.get(spawnIdx++), Enemy.EnemyType.ORC, difficultyMultiplier);
+                break;
+            case 3:
+                spawnEnemyWithType(spawnPoints.get(spawnIdx++), Enemy.EnemyType.GOBLIN, difficultyMultiplier);
+                spawnEnemyWithType(spawnPoints.get(spawnIdx++), Enemy.EnemyType.GOBLIN, difficultyMultiplier);
+                spawnEnemyWithType(spawnPoints.get(spawnIdx++), Enemy.EnemyType.GOBLIN, difficultyMultiplier);
+                spawnEnemyWithType(spawnPoints.get(spawnIdx++), Enemy.EnemyType.MAGE, difficultyMultiplier);
+                spawnEnemyWithType(spawnPoints.get(spawnIdx++), Enemy.EnemyType.MAGE, difficultyMultiplier);
+                spawnEnemyWithType(spawnPoints.get(spawnIdx++), Enemy.EnemyType.ORC, difficultyMultiplier);
+                spawnEnemyWithType(spawnPoints.get(spawnIdx++), Enemy.EnemyType.ORC, difficultyMultiplier);
+                break;
+            default:
+                Enemy.EnemyType[] types = {Enemy.EnemyType.GOBLIN, Enemy.EnemyType.SKELETON, Enemy.EnemyType.ORC, Enemy.EnemyType.MAGE};
+                for (int i = 0; i < numEnemies; i++) {
+                    Enemy.EnemyType randomType = types[random.nextInt(types.length)];
+                    spawnEnemyWithType(spawnPoints.get(i), randomType, difficultyMultiplier);
+                }
+                break;
+        }
     }
 
     private void spawnEnemyWithType(Point2D roomCenter, Enemy.EnemyType type, double difficultyMultiplier) {
@@ -1865,12 +1893,24 @@ public class GameController {
         Weapon.WeaponType[] weaponTypes = Weapon.WeaponType.values();
         Weapon.WeaponType randomType = weaponTypes[(int)(Math.random() * weaponTypes.length)];
         
+        // Get base damage for the specific weapon type
+        int baseDamage;
+        switch (randomType) {
+            case DAGGER: baseDamage = 17; break;  // 17 * 0.7 = 12 damage
+            case SPEAR: baseDamage = 18; break;   // 18 * 0.9 = 16 damage  
+            case SWORD: baseDamage = 20; break;   // 20 * 1.0 = 20 damage
+            case BOW: baseDamage = 23; break;     // 23 * 0.8 = 18 damage
+            case AXE: baseDamage = 19; break;     // 19 * 1.3 = 25 damage
+            default: baseDamage = 20; break;
+        }
+        
         // Create weapon with matching name and type
         Weapon weapon = new Weapon(
             randomType.name(), // Use enum name as weapon name
             "A " + randomType.name().toLowerCase() + " for combat", // Basic description
-            20, // Base damage
-            randomType
+            baseDamage, // Use weapon-specific base damage
+            randomType,
+            false // not a puzzle reward
         );
         
         // Set position and size
@@ -1915,36 +1955,6 @@ public class GameController {
         
         roomItems.add(potion);
     }
-
-    private void spawnItems(DungeonRoom room) {
-        if (room.getType() == DungeonRoom.RoomType.TREASURE) {
-            // Get random positions for items
-            Point2D weaponPos = getRandomRoomPosition();
-            Point2D armorPos = getRandomRoomPosition();
-            Point2D potionPos = getRandomRoomPosition();
-        
-            // Spawn one of each item type
-            spawnWeapon(weaponPos);
-            spawnArmor(armorPos);
-            spawnPotion(potionPos);
-        } else if (room.getType() == DungeonRoom.RoomType.PUZZLE) {
-            // Spawn a single random item in puzzle rooms
-            Point2D itemPos = getRandomRoomPosition();
-            int itemType = (int)(Math.random() * 3); // 0: weapon, 1: armor, 2: potion
-            
-            switch (itemType) {
-                case 0:
-                    spawnWeapon(itemPos);
-                break;
-                case 1:
-                    spawnArmor(itemPos);
-                break;
-                case 2:
-                    spawnPotion(itemPos);
-                break;
-            }
-        }
-    }
     
     private void placeKeyInRoom(DungeonRoom room) {
         // Get the center of the room on the canvas
@@ -1966,51 +1976,6 @@ public class GameController {
         roomItems.add(roomKey);
     }
     
-    private void spawnBasicItem(Point2D position) {
-        Random random = new Random();
-        
-        // Randomize item type
-        Item.ItemType type;
-        String name;
-        String description;
-        int value;
-        boolean consumable;
-        
-        double rnd = random.nextDouble();
-        if (rnd < 0.6) {
-            // 60% chance for a potion
-            type = Item.ItemType.POTION;
-            name = "Health Potion";
-            description = "Restores 20 health";
-            value = 20;
-            consumable = true;
-        } else if (rnd < 0.8) {
-            // 20% chance for a weapon
-            type = Item.ItemType.WEAPON;
-            name = "Sword";
-            description = "A sharp weapon";
-            value = 15;
-            consumable = false;
-        } else {
-            // 20% chance for treasure
-            type = Item.ItemType.TREASURE;
-            name = "Gold Coins";
-            description = "Valuable treasure";
-            value = 50;
-            consumable = true;
-        }
-        
-        // Create the item
-        Item item = new Item(name, description, type, value, consumable);
-        item.setX(position.getX());
-        item.setY(position.getY());
-        item.setSize(20);
-        
-        System.out.println("Added item: " + name + " at " + position.getX() + "," + position.getY());
-        
-        roomItems.add(item);
-    }
-    
     private void spawnEnemy(DungeonRoom room) {
         Random random = new Random();
         Point2D roomPos = new Point2D(room.getX(), room.getY());
@@ -2024,14 +1989,6 @@ public class GameController {
         enemies.add(new Enemy(spawnPos.getX(), spawnPos.getY(), type));
     }
 
-    private boolean isColliding(Entity entity1, Entity entity2) {
-        Point2D center1 = entity1.getPosition().add(entity1.getSize() / 2, entity1.getSize() / 2);
-        Point2D center2 = entity2.getPosition().add(entity2.getSize() / 2, entity2.getSize() / 2);
-        double distance = center1.distance(center2);
-        double combinedRadius = (entity1.getSize() + entity2.getSize()) / 2;
-        return distance < combinedRadius;
-    }
-
     private boolean isInMeleeRange(Entity attacker, Entity target) {
         double attackRange = 40; // Melee attack range
         
@@ -2040,73 +1997,6 @@ public class GameController {
         
         return attackerCenter.distance(targetCenter) < (attacker.getSize() / 2 + target.getSize() / 2 + attackRange);
     }
-
-    private void showFloatingText(String text, Point2D position) {
-        // This would be implemented with a UI element that floats up and fades out
-        // For now, we'll just print to console
-        System.out.println("Floating text at " + position + ": " + text);
-    }
-
-    private void dropRandomItem(Point2D position) {
-        Random random = new Random();
-        if (random.nextDouble() < 0.3) { // 30% chance to drop an item
-            Item.ItemType type = Item.ItemType.values()[random.nextInt(Item.ItemType.values().length)];
-            String name;
-            String description;
-            int value;
-            boolean consumable;
-            
-            switch (type) {
-                case WEAPON:
-                    name = "Sword";
-                    description = "A sharp blade";
-                    value = 10;
-                    consumable = false;
-                    break;
-                case POTION:
-                    name = "Health Potion";
-                    description = "Restores 20 HP";
-                    value = 20;
-                    consumable = true;
-                    break;
-                case ARMOR:
-                    name = "Shield";
-                    description = "Provides protection";
-                    value = 15;
-                    consumable = false;
-                    break;
-                default:
-                    name = "Gold Coins";
-                    description = "Valuable treasure";
-                    value = 50;
-                    consumable = true;
-                    type = Item.ItemType.TREASURE;
-                    break;
-            }
-            
-            // Create and add the item
-            Item item = new Item(name, description, type, value, consumable);
-            item.setX(position.getX());
-            item.setY(position.getY());
-            item.setSize(20);
-            roomItems.add(item);
-        }
-    }
-
-    private boolean isPlayerTouchingItem(Item item) {
-        double playerCenterX = player.getPosition().getX() + player.getSize() / 2;
-        double playerCenterY = player.getPosition().getY() + player.getSize() / 2;
-        double itemCenterX = item.getX() + 5; // Assuming item size is 10x10
-        double itemCenterY = item.getY() + 5;
-        
-        double distance = Math.sqrt(
-            Math.pow(playerCenterX - itemCenterX, 2) + 
-            Math.pow(playerCenterY - itemCenterY, 2)
-        );
-        
-        return distance < (player.getSize() / 2 + 5); // Player radius + item radius
-    }
-
     private void checkRoomTransition() {
         // Check if player is at a door to a connected room
         for (Door door : doors) {
@@ -2140,9 +2030,8 @@ public class GameController {
                 } else {
                     // Show message about locked door if player is touching it
                     if (door.requiresKey()) {
-                        effectsManager.showFloatingText("This door requires a key", 
-                            new Point2D(door.getX() + door.getWidth()/2, door.getY() - 20), 
-                            Color.YELLOW);
+                        Point2D textPosition = calculateSafeTextPosition(door);
+                        effectsManager.showFloatingText("locked", textPosition, Color.YELLOW);
                         
                         // Try to unlock with key if player has one
                         if (player.getInventory().hasItem(Item.ItemType.KEY)) {
@@ -2154,14 +2043,9 @@ public class GameController {
                             }
                         }
                     } else {
-                        // Door is locked for other reasons (enemies not defeated)
-                        String message = "Defeat all enemies to unlock";
-                        if (currentRoom.getType() == DungeonRoom.RoomType.PUZZLE) {
-                            message = "Solve the puzzle to unlock";
-                        }
-                        effectsManager.showFloatingText(message, 
-                            new Point2D(door.getX() + door.getWidth()/2, door.getY() - 20), 
-                            Color.RED);
+                        // Door is locked for other reasons - show simple "locked" message
+                        Point2D textPosition = calculateSafeTextPosition(door);
+                        effectsManager.showFloatingText("locked", textPosition, Color.RED);
                     }
                 }
             }
@@ -2169,90 +2053,77 @@ public class GameController {
     }
 
     private void transitionToRoom(DungeonRoom newRoom, Point2D entryPosition) {
-        if (newRoom == null) return;
+        System.out.println("Transitioning to room: " + newRoom.getType());
+        
+        // Hide statue when leaving puzzle room
+        if (currentRoom != null && currentRoom.getType() == DungeonRoom.RoomType.PUZZLE) {
+            statueVisible = false;
+        }
+        
+        // Re-enable weather changes when leaving treasure room
+        if (currentRoom != null && currentRoom.getType() == DungeonRoom.RoomType.TREASURE) {
+            if (weatherSystem != null) {
+                weatherSystem.setWeatherChangesAllowed(true);
+            }
+        }
+
+        soundManager.stopSound("running");
+        activeKeys.clear(); // Clear any "stuck" keys
+        roomTransitionInProgress = true;
         
         // Play transition sound
         soundManager.playSound("teleport");
         
         // Start room transition effect
-        effectsManager.startRoomTransition(newRoom.getType(), () -> {
-            // This runs after the transition effect completes
-            currentRoom = newRoom;
-            currentRoom.setVisited(true);
-            
-            // Set player position
-            player.setPosition(entryPosition.getX(), entryPosition.getY());
-            
-            // Clear existing room data
-            enemies.clear();
-            projectiles.clear();
-            roomItems.clear();
-            doors.clear();
-            
-            // Reset room cleared state
-            roomCleared = false;
-            
-            // Populate new room
-            populateRoom(currentRoom);
-            
-            // Create doors for the new room
-            createDoors();
-            
-            // Update minimap
-            updateMinimap();
-            
-            // Force a render to ensure all text positions are updated
-            render();
-            
-            // Ensure canvas has focus
-            gameCanvas.requestFocus();
-        });
-    }
-    
-    private void handleDoorInteraction() {
-        for (Door door : doors) {
-            if (door.contains(new Point2D(player.getX(), player.getY()))) {
-                // Check if door is locked
-                if (door.isLocked()) {
-                    if (door.requiresKey()) {
-                        // Try to unlock door with key
-                        if (door.unlock(player.getInventory())) {
-                            // Show unlock effect
-                            effectsManager.showFloatingText("Door Unlocked!", 
-                                new Point2D(door.getX() + door.getWidth() / 2, door.getY() - 10),
-                                Color.YELLOW, 20);
-                            
-                            // Add particles for unlocking effect
-                            for (int i = 0; i < 15; i++) {
-                                effectsManager.addParticle(
-                                    new Point2D(door.getX() + door.getWidth() / 2, door.getY() + door.getHeight() / 2),
-                                    Color.YELLOW,
-                                    1.0
-                                );
-                            }
-                        } else {
-                            // Show message that key is required
-                            effectsManager.showFloatingText("Key Required!", 
-                                new Point2D(door.getX() + door.getWidth() / 2, door.getY() - 10),
-                                Color.RED, 20);
-                        }
-                    } else {
-                        // Show message about room not being cleared
-                        effectsManager.showFloatingText("Clear the room first!", 
-                            new Point2D(door.getX() + door.getWidth() / 2, door.getY() - 10),
-                            Color.RED, 20);
-                    }
-                } else {
-                    // Door is unlocked, transition to connected room
-                    DungeonRoom connectedRoom = door.getConnectedRoom();
-                    Point2D entryPosition = getEntryPosition(door);
-                    transitionToRoom(connectedRoom, entryPosition);
-                }
-                break; // Only interact with one door at a time
+        effectsManager.startRoomTransition(newRoom.getType(), 
+            () -> {
+                // This runs after the fade-in (screen is black)
+                currentRoom = newRoom;
+                currentRoom.setVisited(true);
+                
+                // Set player position
+                player.setPosition(entryPosition.getX(), entryPosition.getY());
+                
+                // Clear existing room data
+                enemies.clear();
+                projectiles.clear();
+                roomItems.clear();
+                doors.clear();
+                
+                // Reset statue state
+                statueVisible = false;
+                
+                // Reset treasure room state
+                torchActive = false;
+                treasureRoomLighted = false;
+                equipmentCollected = 0;
+                spikePositions.clear();
+                safePositions.clear();
+                
+                // Reset room cleared state
+                roomCleared = false;
+                
+                // Populate new room
+                populateRoom(currentRoom);
+                
+                // Create doors for the new room
+                createDoors();
+                
+                // Update minimap
+                updateMinimap();
+                
+                // Force a render to ensure all text positions are updated
+                render();
+                
+                // Ensure canvas has focus
+                gameCanvas.requestFocus();
+            },
+            () -> {
+                // This runs after the fade-out is complete
+                roomTransitionInProgress = false;
             }
-        }
+        );
     }
-    
     private Point2D getEntryPosition(Door door) {
         // Calculate entry position based on door location
         double entryX, entryY;
@@ -2395,6 +2266,7 @@ public class GameController {
     }
 
     private void updateEnemies(double deltaTime) {
+        enemiesToBounceBack.clear(); // Clear at the start of each update
         // Update each enemy in the room
         Iterator<Enemy> enemyIterator = enemies.iterator();
         while (enemyIterator.hasNext()) {
@@ -2424,7 +2296,8 @@ public class GameController {
             // Check if enemy is in bounce-back state
             boolean isBouncingBack = cooldown > 0;
             
-            if (isBouncingBack) {
+            // Only non-boss, non-mage enemies bounce back if they were actually hit
+            if (enemiesToBounceBack.contains(enemy)) {
                 // Move enemy away from player during bounce-back
                 Point2D bounceDirection = enemyCenter.subtract(playerCenter).normalize();
                 double bounceSpeed = 50 * 0.5; // Reduced base speed during bounce
@@ -2467,10 +2340,15 @@ public class GameController {
                     double baseSpeed = 50; // Base speed for enemies
                     double actualSpeed = baseSpeed * (1.0 + (currentLevel - 1) * 0.3); // Scale speed with level
 
+                    // Apply weather effects to enemy speed
+                    if (weatherSystem != null) {
+                        actualSpeed *= weatherSystem.getEnemySpeedMultiplier();
+                    }
+
                     if (enemy.getType() == Enemy.EnemyType.BOSS) {
-                        actualSpeed *= 1.5; // Boss specific speed multiplier
-                        // Apply the "stronger tendency" by scaling the direction vector
-                        effectiveMovementDirection = normalizedDirection.multiply(1.5);
+                        actualSpeed *= 0.7; // Boss specific speed multiplier (reduced from 1.5 to 1.0)
+                        // Apply the "stronger tendency" by scaling the direction vector (reduced from 1.5 to 1.0)
+                        effectiveMovementDirection = normalizedDirection.multiply(1.0);
                     }
 
                     // Set velocity for proper rotation (uses effectiveMovementDirection which might be non-unit for boss)
@@ -2529,7 +2407,27 @@ public class GameController {
                     // Remove sound effect for boss projectiles
                     // soundManager.playSound("character");
                 }
-                
+                // MAGE projectile attack logic
+                if (enemy.getType() == Enemy.EnemyType.MAGE && cooldown <= 0) {
+                    // Mage shoots projectiles at player
+                    Point2D direction = playerCenter.subtract(enemyCenter).normalize();
+                    double projectileDamage = 8.0; // Fixed damage for mage projectiles
+                    
+                    Projectile mageProjectile = new Projectile(
+                        enemyCenter.getX(),
+                        enemyCenter.getY(),
+                        direction.getX() * 180, // slightly slower than boss
+                        direction.getY() * 180,
+                        8, // size
+                        projectileDamage,
+                        Color.PURPLE, // mage color
+                        false
+                    );
+                    projectiles.add(mageProjectile);
+                    
+                    // Set attack cooldown for mage
+                    enemyAttackCooldowns.put(enemy, ATTACK_COOLDOWN); // Normal cooldown
+                }
                 // Enemy melee attack logic
                 if (distanceToPlayer < enemy.getSize() + player.getSize() + 20 && cooldown <= 0) {
                     // Calculate damage based on enemy type and level
@@ -2537,6 +2435,7 @@ public class GameController {
                     
                     // Apply damage to player
                     player.takeDamage(damage);
+                    enemiesToBounceBack.add(enemy);
                     double damageBlocked = player.getLastDamageBlocked(); // Get amount blocked
                     
                     // Show floating text for damage blocked by armor
@@ -2572,6 +2471,42 @@ public class GameController {
                     enemy.setPosition(bouncePosition);
                 }
             }
+            if (enemy.getType() == Enemy.EnemyType.BOSS) {
+                // Summon minions every 7 seconds
+                bossMinionSummonTimer += deltaTime;
+                if (bossMinionSummonTimer >= 7.0) {
+                    bossMinionSummonTimer = 0;
+                    for (int i = 0; i < 2 + random.nextInt(2); i++) {
+                        double angle = random.nextDouble() * Math.PI * 2;
+                        double dist = 80 + random.nextDouble() * 40;
+                        double minionX = enemy.getX() + Math.cos(angle) * dist;
+                        double minionY = enemy.getY() + Math.sin(angle) * dist;
+                        Enemy.EnemyType minionType = random.nextBoolean() ? Enemy.EnemyType.GOBLIN : Enemy.EnemyType.SKELETON;
+                        Enemy minion = new Enemy(minionX, minionY, minionType);
+                        minion.setMaxHealth(minion.getMaxHealth() * 1.2);
+                        minion.heal(minion.getMaxHealth());
+                        enemies.add(minion);
+                        effectsManager.showFloatingText("Minion summoned!", new Point2D(minionX, minionY - 20), Color.LIGHTPINK);
+                    }
+                }
+                // Enrage below 50% health
+                if (!bossEnraged && enemy.getHealth() < enemy.getMaxHealth() * 0.5) {
+                    bossEnraged = true;
+                    enemy.setDamage(enemy.getDamage() * 1.5);
+                    Point2D currentVelocity = enemy.getVelocity();
+                    if (currentVelocity != null) {
+                        enemy.setVelocity(currentVelocity.multiply(1.5));
+                    }
+                    effectsManager.showFloatingText("Boss is enraged!", new Point2D(enemy.getX(), enemy.getY() - 40), Color.RED);
+                }
+                // Reset boss ability state when leaving boss room or boss is defeated
+                if (currentRoom == null || currentRoom.getType() != DungeonRoom.RoomType.BOSS || enemies.stream().noneMatch(e -> e.getType() == Enemy.EnemyType.BOSS)) {
+                    bossMinionSummonTimer = 0;
+                    bossEnraged = false;
+                }
+            }
+
+
         }
         
         // Check if room is cleared
@@ -2584,6 +2519,10 @@ public class GameController {
                 }
             }
         }
+
+        // Add these fields to GameController:
+
+
 }
 
     private double calculateEnemyDamage(Enemy enemy) {
@@ -2769,8 +2708,13 @@ private void updateMinimap() {
     }
 
 public void openInventory() {
+        if (isInventoryOpen) return; // Prevent opening multiple inventories
+
+        isInventoryOpen = true;
+        soundManager.stopSound("running");
+        activeKeys.clear();
+
         try {
-            // Load the inventory FXML
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/dungeon/fxml/Inventory.fxml"));
             Parent inventoryRoot = loader.load();
             
@@ -2784,40 +2728,23 @@ public void openInventory() {
             UIUtils.setStageIcon(inventoryStage); // Set the icon here
             inventoryStage.setTitle("Inventory");
             inventoryStage.initModality(Modality.APPLICATION_MODAL);
-            inventoryStage.initStyle(StageStyle.UNDECORATED);
-            
-            // Set the owner of the new stage to the main game's stage
-            if (gameCanvas != null && gameCanvas.getScene() != null && gameCanvas.getScene().getWindow() != null) {
-                inventoryStage.initOwner(gameCanvas.getScene().getWindow());
-            } else {
-                System.err.println("Warning: Could not set owner for inventory stage, gameCanvas or its window is null.");
-            }
-            
+            inventoryStage.initOwner(gameCanvas.getScene().getWindow());
             inventoryStage.setScene(new Scene(inventoryRoot));
+            inventoryStage.setResizable(false);
             
-            // Center the window (relative to owner if set, otherwise screen)
-            inventoryStage.centerOnScreen();
-            
-            // Show the inventory
-            inventoryStage.show();
-            
-            // Pause the game while inventory is open
-            isPaused = true;
-            gameLoopRunning = false;
-            
-            // Add listener for when inventory is closed
-            inventoryStage.setOnHidden(e -> {
-                isPaused = false;
-                gameLoopRunning = true;
-                startGameLoop();
-                gameCanvas.requestFocus();
-            });
-            
+            // Set icon for the inventory window
+            UIUtils.setStageIcon(inventoryStage);
+
+            // This call will block until the inventory window is closed
+            inventoryStage.showAndWait();
+
         } catch (Exception e) {
-            System.err.println("Error opening inventory: " + e.getMessage());
             e.printStackTrace();
+        } finally {
+            // This will run after the inventory window is closed
+            isInventoryOpen = false;
         }
-}
+    }
 
 public void interactWithPuzzle() {
         // Only interact if we're in a puzzle room
@@ -2877,10 +2804,12 @@ public void interactWithPuzzle() {
             descriptionLabel.setMaxWidth(400);
             
             // Create question label
-            Label questionLabel = new Label(puzzle.getQuestion());
-            questionLabel.setStyle("-fx-font-size: 18px; -fx-text-fill: #FFD700; -fx-font-weight: bold;");
-            questionLabel.setWrapText(true);
-            questionLabel.setMaxWidth(400);
+           TextArea questionArea = new TextArea(puzzle.getQuestion());
+           questionArea.setStyle("-fx-font-size: 18px; -fx-text-fill:rgb(7, 6, 2); -fx-font-weight: bold;");
+           questionArea.setWrapText(true);
+           questionArea.setMaxWidth(400);
+           questionArea.setEditable(false); // This makes it read-only but selectable
+
             
             // Create answer field
             TextField answerField = new TextField();
@@ -2900,8 +2829,20 @@ public void interactWithPuzzle() {
             submitButton.setOnMouseEntered(e -> submitButton.setStyle("-fx-background-color: #45a049; -fx-text-fill: white; -fx-font-size: 16px; -fx-padding: 10 20; -fx-background-radius: 5;"));
             submitButton.setOnMouseExited(e -> submitButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 16px; -fx-padding: 10 20; -fx-background-radius: 5;"));
             
+            // Create a reference to the puzzle stage for use in lambdas
+            final Stage[] puzzleStageRef = new Stage[1];
+            // Create hint icon
+            ImageView hintIcon = new ImageView(new Image(getClass().getResourceAsStream("/com/dungeon/assets/images/hint.png")));
+            hintIcon.setFitWidth(32);
+            hintIcon.setFitHeight(32);
+            hintIcon.setPreserveRatio(true);
+            hintIcon.setStyle("-fx-cursor: hand;");
+            hintIcon.setOnMouseClicked(e -> {
+                showChat(puzzleStageRef[0]);
+            });
+            
             // Add components to container
-            rootContainer.getChildren().addAll(titleLabel, descriptionLabel, questionLabel, answerField, feedbackLabel, submitButton);
+            rootContainer.getChildren().addAll(titleLabel, descriptionLabel, questionArea, answerField, feedbackLabel, submitButton, hintIcon);
             
             // Create the scene
             Scene scene = new Scene(rootContainer);
@@ -3001,6 +2942,10 @@ public void interactWithPuzzle() {
             e.printStackTrace();
         }
     }
+    private void showChat() {
+        Window owner = (gameCanvas != null && gameCanvas.getScene() != null) ? gameCanvas.getScene().getWindow() : null;
+        showChat(owner);
+    }
 
     private void spawnRandomItem(Point2D position) {
         Random random = new Random();
@@ -3015,11 +2960,11 @@ public void interactWithPuzzle() {
         if (itemTypeRoll < 0.1) { // 10% chance for a key (optional, can be removed if not desired from puzzles)
             rewardItem = new Item("Dungeon Key", "Opens locked doors", Item.ItemType.KEY, 1, true);
         } else if (itemTypeRoll < 0.45) { // 35% chance for a weapon (10% to 45%)
-            // Create a random weapon (tier 1 for now)
-            rewardItem = Weapon.createRandomWeapon(1);
+            // Create a random weapon (tier 1 for now) as a puzzle reward (half damage)
+            rewardItem = Weapon.createRandomWeapon(1, true);
         } else if (itemTypeRoll < 0.80) { // 35% chance for armor (45% to 80%)
-            // Create a random armor (tier 1 for now)
-            rewardItem = Armor.createRandomArmor(1);
+            // Create a random armor (tier 1 for now) as a puzzle reward
+            rewardItem = Armor.createRandomArmor(1, true);
         } else { // 20% chance for a potion (80% to 100%)
             rewardItem = new Item("Health Potion", "Restores health when consumed", Item.ItemType.POTION, 25 + random.nextInt(25), true);
         }
@@ -3043,6 +2988,10 @@ public void interactWithPuzzle() {
             System.out.println("Showing game over screen...");
             gameLoopRunning = false;
             soundManager.stopSound("running");
+           
+            if (weatherSystem != null) {
+                    weatherSystem.shutdown();
+                        }
 
             // Get the current scene and its root pane
             Scene currentScene = gameCanvas.getScene();
@@ -3097,6 +3046,9 @@ public void interactWithPuzzle() {
         try {
             soundManager.stopSound("running");
             soundManager.stopBackgroundMusic();
+            if (weatherSystem != null) {
+                weatherSystem.shutdown();
+            }
             gameLoopRunning = false;
 
             // Get the current scene and its root pane
@@ -3146,17 +3098,27 @@ public void interactWithPuzzle() {
         enemiesDefeated++;
         player.addScore((int)enemy.getScoreValue());
         dropItemFromEnemy(enemy);
-        soundManager.playSound("character");
+        soundManager.playSound("death");
         
+        // If in boss room and the defeated enemy is the boss, trigger victory immediately
+        if (currentRoom != null && currentRoom.getType() == DungeonRoom.RoomType.BOSS && 
+            enemy.getType() == Enemy.EnemyType.BOSS) {
+            bossDefeated = true;
+            // Trigger victory screen after a short delay to allow for effects
+            javafx.application.Platform.runLater(() -> {
+                javafx.animation.PauseTransition delay = new javafx.animation.PauseTransition(Duration.seconds(1.5));
+                delay.setOnFinished(e -> checkVictoryCondition());
+                delay.play();
+            });
+            return;
+        }
         // If in boss room and all enemies are defeated, mark boss as defeated
         if (currentRoom != null && currentRoom.getType() == DungeonRoom.RoomType.BOSS && 
             enemies.isEmpty()) {
             bossDefeated = true;
-            soundManager.playSound("start"); // Victory sound
-            
+            // Victory music will be played by VictoryController, so no need for "start" sound here
             // Trigger victory screen after a short delay to allow for effects
             javafx.application.Platform.runLater(() -> {
-                // Create a delay timer to show victory screen after 1.5 seconds
                 javafx.animation.PauseTransition delay = new javafx.animation.PauseTransition(Duration.seconds(1.5));
                 delay.setOnFinished(e -> checkVictoryCondition());
                 delay.play();
@@ -3208,6 +3170,9 @@ public void interactWithPuzzle() {
 public void onPuzzleSolved(DungeonRoom room) {
         // Mark puzzle as solved
         puzzleCompleted = true;
+        
+        // Hide the statue
+        statueVisible = false;
         
         // Play success sound
         soundManager.playSound("start");
@@ -3295,7 +3260,7 @@ public void onPuzzleSolved(DungeonRoom room) {
         );
         playerProjectiles.add(attack);
         
-        soundManager.playSound("character");
+        soundManager.playSound("damage");
     }
 
     private void movePlayer(double deltaTime) {
@@ -3314,6 +3279,15 @@ public void onPuzzleSolved(DungeonRoom room) {
             soundManager.stopSound("running");
         }
         
+        // Apply weather effects to player movement
+        double weatherSpeedMultiplier = 1.0;
+        if (weatherSystem != null) {
+            weatherSpeedMultiplier = weatherSystem.getPlayerSpeedMultiplier();
+        }
+        
+        // Check for statue collision in puzzle rooms
+        checkStatueCollision();
+        
         // Limit player movement to stay within the room boundaries
         double minX = 10; // Left wall + margin
         double minY = 10; // Top wall + margin
@@ -3330,6 +3304,30 @@ public void onPuzzleSolved(DungeonRoom room) {
         // Update player position if it changed due to boundaries
         if (newX != currentPos.getX() || newY != currentPos.getY()) {
             player.setPosition(new Point2D(newX, newY));
+        }
+    }
+    
+    private void checkStatueCollision() {
+        // Only check statue collision in puzzle rooms when statue is visible
+        if (currentRoom != null && currentRoom.getType() == DungeonRoom.RoomType.PUZZLE && 
+            statueVisible && statuePosition != null && player != null) {
+            
+            Point2D playerCenter = player.getPosition().add(player.getSize() / 2, player.getSize() / 2);
+            double distance = playerCenter.distance(statuePosition);
+            
+            // If player is too close to statue, push them back
+            double minDistance = (player.getSize() / 2 + STATUE_SIZE / 2);
+            if (distance < minDistance) {
+                // Calculate direction from statue to player
+                Point2D direction = playerCenter.subtract(statuePosition).normalize();
+                
+                // Calculate new position that maintains minimum distance
+                Point2D newPlayerCenter = statuePosition.add(direction.multiply(minDistance));
+                Point2D newPlayerPosition = newPlayerCenter.subtract(player.getSize() / 2, player.getSize() / 2);
+                
+                // Set player to new position
+                player.setPosition(newPlayerPosition);
+            }
         }
     }
     
@@ -3353,7 +3351,19 @@ public void onPuzzleSolved(DungeonRoom room) {
             Weapon.WeaponType[] weaponTypes = Weapon.WeaponType.values();
             Weapon.WeaponType randomType = weaponTypes[random.nextInt(weaponTypes.length)];
             String name = randomType.toString().charAt(0) + randomType.toString().substring(1).toLowerCase();
-            item = new Weapon(name, "A basic " + name.toLowerCase(), 10 + random.nextInt(10), randomType);
+            
+            // Get base damage for the specific weapon type
+            int baseDamage;
+            switch (randomType) {
+                case DAGGER: baseDamage = 17; break;  // 17 * 0.7 = 12 damage
+                case SPEAR: baseDamage = 18; break;   // 18 * 0.9 = 16 damage  
+                case SWORD: baseDamage = 20; break;   // 20 * 1.0 = 20 damage
+                case BOW: baseDamage = 23; break;     // 23 * 0.8 = 18 damage
+                case AXE: baseDamage = 19; break;     // 19 * 1.3 = 25 damage
+                default: baseDamage = 20; break;
+            }
+            
+            item = new Weapon(name, "A basic " + name.toLowerCase(), baseDamage, randomType, false);
         } else {
             // 20% chance for armor
             Armor.ArmorType[] armorTypes = Armor.ArmorType.values();
@@ -3383,157 +3393,34 @@ public void onPuzzleSolved(DungeonRoom room) {
         switch (weaponIndex) {
             case 0: weaponName = "Sword"; break;
             case 1: weaponName = "Bow"; break;
-            case 2: weaponName = "Staff"; break;
+            case 2: weaponName = "Spear"; break;
             case 3: weaponName = "Axe"; break;
         }
         
         effectsManager.showFloatingText("Selected: " + weaponName, 
             player.getPosition(), Color.LIGHTYELLOW);
     }
-
-    private void renderDoors(GraphicsContext gc) {
-        for (Door door : doors) {
-            // Draw door rectangle
-            Color doorColor = door.isLocked() ? Color.RED : Color.GREEN;
-            gc.setFill(doorColor);
-            gc.fillRect(door.getX(), door.getY(), door.getWidth(), door.getHeight());
-            
-            // Add door frame
-            gc.setStroke(Color.DARKGRAY);
-            gc.setLineWidth(3);
-            gc.strokeRect(door.getX() - 2, door.getY() - 2, door.getWidth() + 4, door.getHeight() + 4);
-            
-            // Add door handle
-            gc.setFill(Color.GOLD);
-            gc.fillOval(
-                door.getX() + door.getWidth() * 0.8, 
-                door.getY() + door.getHeight() / 2, 
-                5, 
-                5
-            );
-            
-            // Draw key icon if door requires key
-            if (door.requiresKey()) {
-                gc.setFill(Color.YELLOW);
-                gc.fillOval(
-                    door.getX() + door.getWidth() / 2 - 7,
-                    door.getY() + door.getHeight() / 2 - 7,
-                    14, 14
-                );
-                gc.setStroke(Color.BLACK);
-                gc.setLineWidth(1);
-                gc.strokeOval(
-                    door.getX() + door.getWidth() / 2 - 7,
-                    door.getY() + door.getHeight() / 2 - 7,
-                    14, 14
-                );
-            }
-            
-            // Display the connected room type with adjusted position
-            String roomType = door.getConnectedRoom().getType().toString();
-            gc.setFill(Color.WHITE);
-            gc.setStroke(Color.BLACK);
-            gc.setLineWidth(2);
-            gc.setTextAlign(TextAlignment.CENTER);
-            
-            // Calculate text position based on door direction
-            double textX = door.getX() + door.getWidth() / 2;
-            double textY;
-            switch (door.getDirection()) {
-                case NORTH:
-                    textY = door.getY() - 20; // Above the door
-                    break;
-                case SOUTH:
-                    textY = door.getY() + door.getHeight() + 20; // Below the door
-                    break;
-                case EAST:
-                    textX = door.getX() + door.getWidth() + 20; // Right of the door
-                    textY = door.getY() + door.getHeight() / 2;
-                    break;
-                case WEST:
-                    textX = door.getX() - 20; // Left of the door
-                    textY = door.getY() + door.getHeight() / 2;
-                    break;
-                default:
-                    textY = door.getY() - 20;
-            }
-            
-            // Draw text with outline for better visibility
-            gc.strokeText(roomType, textX, textY);
-            gc.fillText(roomType, textX, textY);
-        }
-    }
-
-    private void showLevelCompletionMessage() {
+  
+ private void showLevelCompletionMessage() {
         // Show a floating text in the center of the canvas
         if (gameCanvas != null && effectsManager != null) {
             effectsManager.showFloatingText(
-                "Level Complete! Return to the spawn room!",
-                new javafx.geometry.Point2D(gameCanvas.getWidth() / 2, gameCanvas.getHeight() / 2),
+                "Level Complete!",
+                new javafx.geometry.Point2D(gameCanvas.getWidth() / 2, 50), // Position at top-middle
                 javafx.scene.paint.Color.GOLD
             );
         } else {
-            System.out.println("Level Complete! Return to the spawn room!");
+            System.out.println("Level Complete!");
         }
     }
-
-    private void handleRoomTransition(DungeonRoom newRoom) {
-        soundManager.playSound("teleport");
-        // ... existing code ...
-    }
-
-    private void onPuzzleFailed() {
-        soundManager.playSound("fail");
-        // ... existing code ...
-    }
-
-    private void onPuzzleCompleted() {
-        soundManager.playSound("start");
-        // ... existing code ...
-    }
-
-    private void updatePlayerPosition(double deltaTime) {
-        // ... existing movement code ...
-        
-        // Check if player is near any door and trigger animation
-        for (Door door : doors) {
-            if (!door.isLocked()) {
-                Point2D playerPos = new Point2D(player.getX(), player.getY());
-                double distance = playerPos.distance(
-                    door.getX() + door.getWidth() / 2,
-                    door.getY() + door.getHeight() / 2
-                );
-                System.out.println("Checking door at " + door.getX() + "," + door.getY() + 
-                                 " - Distance: " + distance + 
-                                 " - Animation playing: " + door.isAnimationPlaying());
-                
-                if (distance < 150) { // Door animation range
-                    if (!door.isAnimationPlaying()) {
-                        System.out.println("Starting door animation");
-                        effectsManager.playDoorOpeningAnimation(door);
-                        door.setAnimationPlaying(true);
-                    }
-                } else {
-                    door.setAnimationPlaying(false);
-                }
-            }
-        }
-        
-        // ... rest of the update code ...
-    }
-
-    // Add these fields to the class
-    private Map<Door, Double> doorAnimations = new HashMap<>();
-    private long lastDoorCheckTime = 0;
-    
     // Add new method to render doors with animations
     private void renderDoorsWithAnimations(GraphicsContext gc) {
         if (doors.isEmpty()) {
-            System.out.println("No doors to render");
+            // System.out.println("No doors to render");
             return;
         }
         
-        System.out.println("Rendering " + doors.size() + " doors");
+        // System.out.println("Rendering " + doors.size() + " doors");
         long currentTime = System.currentTimeMillis();
         
         // Check player position to update door animations
@@ -3571,6 +3458,23 @@ public void onPuzzleSolved(DungeonRoom room) {
         
         // Render each door with its animation state
         for (Door door : doors) {
+            // In treasure room, only show doors if torch is active and door is within light radius
+            if (currentRoom != null && currentRoom.getType() == DungeonRoom.RoomType.TREASURE && !treasureRoomLighted) {
+                if (!torchActive || player == null) {
+                    continue; // Skip rendering if torch is not active
+                }
+                
+                Point2D lightCenter = new Point2D(player.getPosition().getX() + player.getSize()/2, 
+                                                 player.getPosition().getY() + player.getSize()/2);
+                Point2D doorCenter = new Point2D(door.getX() + door.getWidth()/2, 
+                                               door.getY() + door.getHeight()/2);
+                double distance = lightCenter.distance(doorCenter);
+                
+                if (distance > TORCH_LIGHT_RADIUS) {
+                    continue; // Skip rendering if door is outside light radius
+                }
+            }
+            
             Double openAngle = doorAnimations.getOrDefault(door, 0.0);
             Color doorColor;
             
@@ -3668,15 +3572,6 @@ public void onPuzzleSolved(DungeonRoom room) {
         }
     }
 
-   
-    private Map<Enemy, Double> enemyAttackCooldowns = new HashMap<>();
-    private static final double ATTACK_COOLDOWN = 2.0; // 2 seconds cooldown
-    private static final double BOUNCE_DISTANCE = 100.0; // Distance to bounce back
-    
-    private Map<Enemy.EnemyType, javafx.scene.image.Image> enemyImages = new HashMap<>();
-    private Map<Weapon.WeaponType, javafx.scene.image.Image> weaponImages = new HashMap<>();
-    private GraphicsContext gc;
-
     private void loadWeaponImages() {
         try {
             for (Weapon.WeaponType type : Weapon.WeaponType.values()) {
@@ -3688,59 +3583,142 @@ public void onPuzzleSolved(DungeonRoom room) {
         }
     }
 
-    private void handleInventoryItemUse(Item item) {
-        if (item instanceof Weapon) {
-            Weapon weapon = (Weapon) item;
-            player.setEquippedWeapon(weapon);  // Use setEquippedWeapon instead of setWeapon
-            System.out.println("Equipped weapon: " + weapon.getName());
+    private void checkStatueInteraction() {
+        // Only check statue interaction in puzzle rooms when statue is visible
+        if (currentRoom != null && currentRoom.getType() == DungeonRoom.RoomType.PUZZLE && 
+            statueVisible && statuePosition != null && player != null) {
             
-            // Update player's current weapon
-            player.setWeapon(weapon);
+            // Calculate distance between player and statue
+            Point2D playerCenter = player.getPosition().add(player.getSize() / 2, player.getSize() / 2);
+            double distance = playerCenter.distance(statuePosition);
             
-            // Update player's weapons list if needed
-            List<Weapon> weapons = player.getWeapons();
-            if (!weapons.contains(weapon)) {
-                weapons.add(weapon);
+            // Show floating text when player is near statue
+            if (distance < STATUE_INTERACTION_RANGE) {
+                // Show the floating text slightly above the statue
+                Point2D textPosition = new Point2D(statuePosition.getX(), statuePosition.getY() - STATUE_SIZE/2 - 30);
+                effectsManager.showFloatingText("Press F to unlock the doors", textPosition, Color.YELLOW);
             }
-            
-            // Update current weapon index
-            player.selectWeapon(weapons.indexOf(weapon));
+        }
+    }
+    
+    private void toggleTorch() {
+        if (currentRoom != null && currentRoom.getType() == DungeonRoom.RoomType.TREASURE) {
+            torchActive = !torchActive;
+            String message = torchActive ? "Torch lit!" : "Torch extinguished!";
+            Point2D playerPos = player.getPosition();
+            effectsManager.showFloatingText(message, playerPos, torchActive ? Color.YELLOW : Color.GRAY);
+        }
+    }
+    
+    private void generateTreasureRoomLayout() {
+        spikePositions.clear();
+        safePositions.clear();
+        
+        double roomWidth = gameCanvas.getWidth();
+        double roomHeight = gameCanvas.getHeight();
+        
+        // Create a grid of positions
+        int gridSize = 8;
+        double cellWidth = roomWidth / gridSize;
+        double cellHeight = roomHeight / gridSize;
+        
+        // Generate random spike pattern (about 60% of cells have spikes)
+        for (int x = 0; x < gridSize; x++) {
+            for (int y = 0; y < gridSize; y++) {
+                double posX = x * cellWidth + cellWidth / 2;
+                double posY = y * cellHeight + cellHeight / 2;
+                
+                // Keep center area and door areas safe
+                boolean isCenter = (x >= 3 && x <= 4 && y >= 3 && y <= 4);
+                boolean isDoorArea = (x == 0 || x == gridSize-1 || y == 0 || y == gridSize-1);
+                
+                if (!isCenter && !isDoorArea && random.nextDouble() < 0.6) {
+                    spikePositions.add(new Point2D(posX, posY));
+                } else {
+                    safePositions.add(new Point2D(posX, posY));
+                }
+            }
+        }
+        
+        System.out.println("Generated " + spikePositions.size() + " spikes and " + safePositions.size() + " safe areas");
+    }
+    
+    private void spawnTreasureRoomEquipment() {
+        // Spawn 3 equipment items in safe areas, scattered near the middle area
+        List<Point2D> availableSafePositions = new ArrayList<>(safePositions);
+        double roomCenterX = gameCanvas.getWidth() / 2;
+        double roomCenterY = gameCanvas.getHeight() / 2;
+        double minDist = Math.min(gameCanvas.getWidth(), gameCanvas.getHeight()) * 0.18; // not too close to center
+        double maxDist = Math.min(gameCanvas.getWidth(), gameCanvas.getHeight()) * 0.38; // not too far from center
+        // Filter positions to a "middle ring"
+        List<Point2D> middleRing = new ArrayList<>();
+        for (Point2D pos : availableSafePositions) {
+            double dist = pos.distance(roomCenterX, roomCenterY);
+            if (dist >= minDist && dist <= maxDist) {
+                middleRing.add(pos);
+            }
+        }
+        // If not enough, fallback to all safe positions
+        List<Point2D> spawnPositions = middleRing.size() >= 3 ? middleRing : availableSafePositions;
+        Collections.shuffle(spawnPositions, random);
+        int equipmentCount = Math.min(3, spawnPositions.size());
+        for (int i = 0; i < equipmentCount; i++) {
+            Point2D position = spawnPositions.get(i);
+            // Add a small random offset to scatter
+            double offsetX = (random.nextDouble() - 0.5) * 40;
+            double offsetY = (random.nextDouble() - 0.5) * 40;
+            Point2D scatterPos = new Point2D(position.getX() + offsetX, position.getY() + offsetY);
+            Item equipment;
+            switch (i) {
+                case 0:
+                    Weapon.WeaponType[] weaponTypes = Weapon.WeaponType.values();
+                    Weapon.WeaponType weaponType = weaponTypes[random.nextInt(weaponTypes.length)];
+                    int weaponDamage = Math.min(20 + currentLevel * 5, 30); // Cap at 30
+                    equipment = new Weapon(weaponType.name(), "A powerful " + weaponType.name().toLowerCase(), weaponDamage, weaponType, false);
+                    break;
+                case 1:
+                    Armor.ArmorType[] armorTypes = Armor.ArmorType.values();
+                    Armor.ArmorType armorType = armorTypes[random.nextInt(armorTypes.length)];
+                    equipment = new Armor(armorType.name() + " Armor", "Protective " + armorType.name().toLowerCase(), armorType);
+                    break;
+                case 2:
+                    equipment = new Item("Health Potion", "Restores 30 health", Item.ItemType.POTION, 30, true);
+                    break;
+                default:
+                    equipment = new Item("Gold", "Valuable treasure", Item.ItemType.TREASURE, 50, true);
+                    break;
+            }
+            equipment.setX(scatterPos.getX());
+            equipment.setY(scatterPos.getY());
+            equipment.setSize(25);
+            roomItems.add(equipment);
         }
     }
 
-    private void renderPlayer() {
-        // Draw player
-        gc.setFill(Color.BLUE);
-        gc.fillRect(player.getX(), player.getY(), player.getSize(), player.getSize());
-        
-        // Draw player's weapon
-        Weapon currentWeapon = player.getWeapon();
-        if (currentWeapon != null) {
-            javafx.scene.image.Image weaponImage = weaponImages.get(currentWeapon.getWeaponType());
-            if (weaponImage != null) {
-                // Calculate weapon position based on player's position and direction
-                double weaponSize = player.getSize() * 0.8;
-                double weaponX = player.getX() + (player.getSize() - weaponSize) / 2;
-                double weaponY = player.getY() + (player.getSize() - weaponSize) / 2;
+    private void checkSpikeCollision() {
+        if (currentRoom != null && currentRoom.getType() == DungeonRoom.RoomType.TREASURE && 
+            player != null && !treasureRoomLighted) {
+            
+            Point2D playerCenter = player.getPosition().add(player.getSize() / 2, player.getSize() / 2);
+            
+            for (Point2D spikePos : spikePositions) {
+                double distance = playerCenter.distance(spikePos);
                 
-                // Draw weapon image
-                gc.drawImage(weaponImage, weaponX, weaponY, weaponSize, weaponSize);
+                if (distance < (player.getSize() / 2 + SPIKE_SIZE / 2)) {
+                    // Player hit a spike
+                    player.takeDamage(SPIKE_DAMAGE);
+                    effectsManager.showFloatingText("-" + (int)SPIKE_DAMAGE, player.getPosition(), Color.RED);
+                    soundManager.playSound("damage");
+                    
+                    // Push player back slightly
+                    Point2D direction = playerCenter.subtract(spikePos).normalize();
+                    Point2D newPos = player.getPosition().add(direction.multiply(30));
+                    player.setPosition(newPos);
+                    
+                    break; // Only hit one spike at a time
+                }
             }
         }
-        
-        // Draw player's health bar
-        double healthBarWidth = player.getSize() * 0.8;
-        double healthBarHeight = 5;
-        double healthBarY = player.getY() - 10;
-        double healthBarX = player.getX() + (player.getSize() - healthBarWidth) / 2;
-        
-        // Health bar background
-        gc.setFill(Color.BLACK);
-        gc.fillRect(healthBarX, healthBarY, healthBarWidth, healthBarHeight);
-        
-        // Health bar foreground
-        double healthPercentage = (double) player.getHealth() / player.getMaxHealth();
-        gc.setFill(Color.GREEN);
-        gc.fillRect(healthBarX, healthBarY, healthBarWidth * healthPercentage, healthBarHeight);
     }
+
 }

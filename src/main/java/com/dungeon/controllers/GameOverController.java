@@ -16,6 +16,9 @@ import javafx.stage.Stage;
 import javafx.animation.FadeTransition;
 import javafx.util.Duration;
 import javafx.scene.paint.Color;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.StackPane;
 
 import java.util.Optional;
 
@@ -38,10 +41,29 @@ public class GameOverController {
     @FXML
     private Button quitButton;
     
+    @FXML
+    private StackPane gameOverRoot;
+    
     private int score;
     private int levelsCompleted;
     private int enemiesDefeated;
     private GameController gameController;
+    
+    @FXML
+    public void initialize() {
+        // Set the background image for the game over screen
+        Image bgImage = new Image(getClass().getResourceAsStream("/com/dungeon/assets/images/gameover.jpg"));
+        ImageView bgView = new ImageView(bgImage);
+        bgView.setPreserveRatio(false);
+        bgView.setFitWidth(gameOverRoot.getWidth());
+        bgView.setFitHeight(gameOverRoot.getHeight());
+        bgView.fitWidthProperty().bind(gameOverRoot.widthProperty());
+        bgView.fitHeightProperty().bind(gameOverRoot.heightProperty());
+        bgView.setSmooth(true);
+        bgView.setCache(true);
+        // Add the background image as the first child
+        gameOverRoot.getChildren().add(0, bgView);
+    }
     
     public void setGameStats(int score, int levelsCompleted, int enemiesDefeated) {
         this.score = score;

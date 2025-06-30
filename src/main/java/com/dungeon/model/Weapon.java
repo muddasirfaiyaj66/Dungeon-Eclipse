@@ -6,11 +6,13 @@ import javafx.scene.paint.Color;
  * Represents a weapon that the player can equip to deal damage to enemies
  */
 public class Weapon extends Item {
-    private int damage; // This will store the calculated damage
-    private final int baseDamage; // Stores the original base damage
+    private final int baseDamage;
+    private final int actualDamage;
+    private final int originalBaseDamage;
     private double attackRange;
     private double attackSpeed; // Attacks per second
     private WeaponType weaponType;
+    private boolean isPuzzleReward = false;
     
     /**
      * Types of weapons with different attributes
@@ -64,12 +66,13 @@ public class Weapon extends Item {
      * @param baseDamage Base damage value
      * @param weaponType Type of weapon
      */
-    public Weapon(String name, String description, int baseDamage, WeaponType weaponType) {
+    public Weapon(String name, String description, int baseDamage, WeaponType weaponType, boolean isPuzzleReward) {
         super(name, description, ItemType.WEAPON, baseDamage, false, weaponType.getImagePath());
-        
-        this.baseDamage = baseDamage; // Initialize baseDamage
+        this.originalBaseDamage = baseDamage;
+        this.baseDamage = baseDamage;
         this.weaponType = weaponType;
-        this.damage = (int)(baseDamage * weaponType.getDamageMultiplier()); // Calculated damage
+        this.isPuzzleReward = isPuzzleReward;
+        this.actualDamage = isPuzzleReward ? (int)Math.round(baseDamage * 0.5) : baseDamage;
         this.attackRange = weaponType.getRange();
         this.attackSpeed = 1.0 * weaponType.getSpeedMultiplier();
     }
@@ -79,15 +82,15 @@ public class Weapon extends Item {
      * @return Calculated damage value
      */
     public int getDamage() {
-        return damage;
+        return actualDamage;
     }
 
     /**
      * Gets the weapon's original base damage value
      * @return Original base damage value
      */
-    public int getBaseDamage() {
-        return baseDamage;
+    public int getOriginalBaseDamage() {
+        return originalBaseDamage;
     }
     
     /**
@@ -119,7 +122,7 @@ public class Weapon extends Item {
      * @return DPS value
      */
     public double getDPS() {
-        return damage * attackSpeed;
+        return baseDamage * attackSpeed;
     }
     
     /**
@@ -128,7 +131,7 @@ public class Weapon extends Item {
      */
     public static Weapon createBasicWeapon() {
         return new Weapon("Rusty Sword", "A basic sword with moderate damage", 
-                10, WeaponType.SWORD);
+                20, WeaponType.SWORD, false);
     }
     
     /**
@@ -136,23 +139,31 @@ public class Weapon extends Item {
      * @param tier Tier/quality of the weapon (1-3)
      * @return A randomly generated weapon
      */
-    public static Weapon createRandomWeapon(int tier) {
-        // Clamp tier between 1-3
+    public static Weapon createRandomWeapon(int tier, boolean isPuzzleReward) {
         tier = Math.max(1, Math.min(3, tier));
-        
-        // Base damage increases with tier
-        int baseDamage = 10 + (tier - 1) * 5;
-        
-        // Random weapon type
         WeaponType[] types = WeaponType.values();
         WeaponType randomType = types[(int)(Math.random() * types.length)];
-        
-        // Generate name and description based on tier and type
+        int baseDamage = getBaseDamageForWeaponType(randomType);
+        baseDamage += (tier - 1) * 5;
+        int shownDamage = isPuzzleReward ? (int)Math.round(baseDamage * 0.5) : baseDamage;
         String[] tierNames = {"Basic", "Refined", "Masterwork"};
         String name = tierNames[tier - 1] + " " + getWeaponTypeName(randomType);
-        String description = generateDescription(randomType, tier);
-        
-        return new Weapon(name, description, baseDamage, randomType);
+        String description = generateDescription(randomType, tier, shownDamage, isPuzzleReward);
+        return new Weapon(name, description, baseDamage, randomType, isPuzzleReward);
+    }
+    
+    /**
+     * Gets the base damage for a specific weapon type
+     */
+    private static int getBaseDamageForWeaponType(WeaponType type) {
+        switch (type) {
+            case DAGGER: return 17;  // 17 * 0.7 = 12 damage
+            case SPEAR: return 18;   // 18 * 0.9 = 16 damage  
+            case SWORD: return 20;   // 20 * 1.0 = 20 damage
+            case BOW: return 23;     // 23 * 0.8 = 18 damage
+            case AXE: return 19;     // 19 * 1.3 = 25 damage
+            default: return 20;
+        }
     }
     
     /**
@@ -172,22 +183,27 @@ public class Weapon extends Item {
     /**
      * Generates a description based on weapon type and tier
      */
-    private static String generateDescription(WeaponType type, int tier) {
+    private static String generateDescription(WeaponType type, int tier, int damage, boolean isPuzzleReward) {
         String quality = (tier == 1) ? "adequate" : (tier == 2) ? "good" : "excellent";
-        
+        String rewardNote = isPuzzleReward ? " (Puzzle Reward: Half Damage)" : "";
+        String damageText = "Deals " + damage + " damage" + rewardNote + ".";
         switch (type) {
             case SWORD:
-                return "A " + quality + " sword with balanced attack properties.";
+                return "A " + quality + " sword. " + damageText + " Balanced attack properties.";
             case DAGGER:
-                return "A " + quality + " dagger that strikes quickly but with shorter range.";
+                return "A " + quality + " dagger. " + damageText + " Strikes quickly but with shorter range.";
             case AXE:
-                return "A " + quality + " battle axe that deals high damage but swings slowly.";
+                return "A " + quality + " battle axe. " + damageText + " Swings slowly.";
             case SPEAR:
-                return "A " + quality + " spear with extended reach.";
+                return "A " + quality + " spear. " + damageText + " Extended reach.";
             case BOW:
-                return "A " + quality + " bow for attacking enemies from a distance.";
+                return "A " + quality + " bow. " + damageText + " For attacking from a distance.";
             default:
-                return "A " + quality + " weapon.";
+                return "A " + quality + " weapon. " + damageText;
         }
+    }
+
+    public boolean isPuzzleReward() {
+        return isPuzzleReward;
     }
 } 

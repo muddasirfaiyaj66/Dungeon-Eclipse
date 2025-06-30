@@ -1,14 +1,14 @@
 package com.dungeon;
 
+import com.dungeon.server.PuzzleServer;
+import com.dungeon.utils.UIUtils;
+
+import javafx.animation.FadeTransition;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.image.Image;
 import javafx.stage.Stage;
-import com.dungeon.utils.UIUtils;
-import javafx.animation.FadeTransition;
-import javafx.application.Platform;
 import javafx.util.Duration;
 
 public class Main extends Application {
@@ -16,6 +16,39 @@ public class Main extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception {
+
+         new Thread(() -> {
+            try {
+                System.out.println("🚀 Starting PuzzleServer...");
+                PuzzleServer.start(); 
+            } catch (Exception e) {
+                System.err.println("❌ Failed to start PuzzleServer: " + e.getMessage());
+                e.printStackTrace();
+                System.err.println("💡 Try checking if port 9999 is already in use");
+            }
+        }).start();
+        
+        // Give the server a moment to start
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        
+        // Test if the server is accessible
+        new Thread(() -> {
+            try {
+                Thread.sleep(2000); // Wait a bit more for server to fully start
+                if (PuzzleServer.testConnection()) {
+                    System.out.println("🎉 Puzzle server is ready for puzzle chat!");
+                } else {
+                    System.err.println("⚠️  Puzzle server may not be working properly");
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }).start();
+        
         try {
             // Set application icon using the utility method
             UIUtils.setStageIcon(primaryStage);
@@ -75,8 +108,19 @@ public class Main extends Application {
             e.printStackTrace();
         }
     }
-
+    @Override
+    public void stop() throws Exception {
+        com.dungeon.audio.SoundManager.getInstance().shutdown();
+        com.dungeon.server.PuzzleServer.shutdown();
+        super.stop();
+    }
     public static void main(String[] args) {
+        // Add shutdown hook to ensure PuzzleServer is closed
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            System.out.println("🛑 Application shutdown detected, cleaning up...");
+            com.dungeon.server.PuzzleServer.shutdown();
+        }));
+        
         launch(args);
     }
 }

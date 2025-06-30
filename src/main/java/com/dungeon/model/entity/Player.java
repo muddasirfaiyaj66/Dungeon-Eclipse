@@ -22,8 +22,8 @@ public class Player extends Entity {
     private static final double DEFAULT_HEALTH = 100;
     private static final double DEFAULT_SPEED = 200; // pixels per second
     private static final double DEFAULT_SIZE = 30;
-    private static final double MELEE_DAMAGE = 20;
-    private static final double RANGED_DAMAGE = 15;
+    private static final double MELEE_DAMAGE = 20;  // Default damage (matches sword)
+    private static final double RANGED_DAMAGE = 18; // Default damage (matches bow)
     private static final double ATTACK_COOLDOWN = 0.5; // seconds
     private static final javafx.scene.paint.Color DEFAULT_PROJECTILE_COLOR = javafx.scene.paint.Color.YELLOW;
     
@@ -63,7 +63,7 @@ public class Player extends Entity {
          try {
             // Load the player image from resources
           playerImage = new Image(
-    getClass().getResourceAsStream("/com/dungeon/assets/images/player.png"),
+    getClass().getResourceAsStream("/com/dungeon/assets/images/player.gif"),
     64,   // width
     64,   // height
     true, // preserve ratio
@@ -88,9 +88,9 @@ this.size = 64;
         // Initialize weapons with basic weapons
         this.weapons = new ArrayList<>();
         this.weapons.add(Weapon.createBasicWeapon());
-        this.weapons.add(new Weapon("Basic Bow", "A simple bow for ranged attacks", 15, Weapon.WeaponType.BOW));
-        this.weapons.add(new Weapon("Basic Staff", "A magical staff for spellcasting", 20, Weapon.WeaponType.SPEAR));
-        this.weapons.add(new Weapon("Basic Axe", "A heavy axe for powerful strikes", 25, Weapon.WeaponType.AXE));
+        this.weapons.add(new Weapon("Basic Bow", "A simple bow for ranged attacks", 23, Weapon.WeaponType.BOW, false));
+        this.weapons.add(new Weapon("Basic Spear", "A magical staff for spellcasting", 18, Weapon.WeaponType.SPEAR, false));
+        this.weapons.add(new Weapon("Basic Axe", "A heavy axe for powerful strikes", 19, Weapon.WeaponType.AXE, false));
         this.currentWeaponIndex = 0;
         
         // Initialize stats
@@ -115,10 +115,9 @@ this.size = 64;
         double actualDamageTaken = incomingDamage;
         
         if (equippedArmor != null) {
-            double reductionPercentage = equippedArmor.getArmorType().getDamageReductionPercentage();
+            double reductionPercentage = equippedArmor.getActualReduction();
             this.lastDamageBlocked = incomingDamage * reductionPercentage;
             actualDamageTaken = incomingDamage - this.lastDamageBlocked;
-            
             System.out.println("[DEBUG] Armor Type: " + equippedArmor.getArmorType() + ", Reduction %: " + reductionPercentage);
             System.out.println("[DEBUG] Damage Reduced by Armor: " + this.lastDamageBlocked);
             if (this.lastDamageBlocked > 0) {
@@ -472,7 +471,8 @@ this.size = 64;
     }
 
     public double getMeleeDamage() {
-        return equippedWeapon != null ? equippedWeapon.getDamage() : MELEE_DAMAGE;
+        double weaponDamage = equippedWeapon != null ? equippedWeapon.getDamage() : MELEE_DAMAGE;
+        return weaponDamage + strength; // Add player strength to weapon damage
     }
 
     public Set<ProjectileAttack> getProjectiles() {

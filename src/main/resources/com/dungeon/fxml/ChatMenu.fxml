@@ -5,7 +5,7 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.*?>
 
-<BorderPane fx:controller="com.dungeon.effects.messaging.ChatController"
+<BorderPane fx:controller="com.dungeon.effects.messaging.ChatMenuController"
             xmlns="http://javafx.com/javafx/23.0.1"
             xmlns:fx="http://javafx.com/fxml/1"
             prefWidth="600" prefHeight="500"

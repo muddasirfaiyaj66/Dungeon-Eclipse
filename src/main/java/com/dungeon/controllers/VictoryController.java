@@ -1,6 +1,7 @@
 package com.dungeon.controllers;
 
 import com.dungeon.data.ScoreManager;
+import com.dungeon.audio.SoundManager;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -15,6 +16,9 @@ import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.animation.FadeTransition;
 import javafx.util.Duration;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.StackPane;
 
 import java.util.Optional;
 
@@ -40,17 +44,39 @@ public class VictoryController {
     @FXML
     private Button quitButton;
     
+    @FXML
+    private StackPane victoryRoot;
+    
     private int score;
     private String timeElapsed;
     private int enemiesDefeated;
     private int currentLevel;
     private GameController gameController;
     
+    @FXML
+    public void initialize() {
+        // Set the background image for the victory screen
+        Image bgImage = new Image(getClass().getResourceAsStream("/com/dungeon/assets/images/victory.jpeg"));
+        ImageView bgView = new ImageView(bgImage);
+        bgView.setPreserveRatio(false);
+        bgView.setFitWidth(victoryRoot.getWidth());
+        bgView.setFitHeight(victoryRoot.getHeight());
+        bgView.fitWidthProperty().bind(victoryRoot.widthProperty());
+        bgView.fitHeightProperty().bind(victoryRoot.heightProperty());
+        bgView.setSmooth(true);
+        bgView.setCache(true);
+        // Add the background image as the first child
+        victoryRoot.getChildren().add(0, bgView);
+    }
+    
     public void setGameStats(int score, String timeElapsed, int enemiesDefeated, int level) {
         this.score = score;
         this.timeElapsed = timeElapsed;
         this.enemiesDefeated = enemiesDefeated;
         this.currentLevel = level;
+        
+        // Play victory music
+        SoundManager.getInstance().playVictoryMusic();
         
         String levelText = level >= 3 ? "Congratulations! You have defeated the final boss and won the game!" : "Victory! You have completed level " + level + "!";
         congratsText.setText(levelText);
@@ -139,6 +165,11 @@ public class VictoryController {
     private void startNextLevel() {
         if (currentLevel >= 3) return; 
 
+        // Stop victory music and resume background music
+        SoundManager soundManager = SoundManager.getInstance();
+        soundManager.stopSound("victory");
+        soundManager.playBackgroundMusic();
+
         try {
             Scene currentScene = nextLevelButton.getScene();
             
@@ -180,6 +211,9 @@ public class VictoryController {
     @FXML
     @SuppressWarnings("unused")
     private void returnToMainMenu() {
+       // Stop victory music
+       SoundManager.getInstance().stopSound("victory");
+       
        try {
             // Get the current scene and its root pane
             Scene currentScene = mainMenuButton.getScene();
@@ -219,6 +253,8 @@ public class VictoryController {
     @FXML
     @SuppressWarnings("unused")
     private void quitGame() {
+        // Stop victory music before exiting
+        SoundManager.getInstance().stopSound("victory");
         Platform.exit();
     }
 } 

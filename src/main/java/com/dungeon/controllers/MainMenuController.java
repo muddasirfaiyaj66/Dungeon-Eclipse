@@ -11,6 +11,9 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.StackPane;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Duration;
@@ -31,6 +34,12 @@ public class MainMenuController {
     
     @FXML
     private Button exitButton;
+    
+    @FXML
+    private Button chatButton;
+    
+    @FXML
+    private StackPane mainMenuRoot;
     
     @FXML
     @SuppressWarnings("unused")
@@ -206,7 +215,49 @@ public class MainMenuController {
 
     @FXML
     @SuppressWarnings("unused")
+    private void openChat() {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/dungeon/fxml/ChatMenu.fxml"));
+            Parent chatRoot = loader.load();
+            Scene chatScene = new Scene(chatRoot);
+            Stage chatStage = new Stage();
+            chatStage.setTitle("Game Chat");
+            chatStage.initModality(Modality.APPLICATION_MODAL);
+            chatStage.initOwner(chatButton.getScene().getWindow());
+            chatStage.setScene(chatScene);
+            chatStage.setResizable(false); // Chat window is typically not resizable
+            UIUtils.setStageIcon(chatStage);
+            chatStage.showAndWait();
+        } catch (Exception e) {
+            System.err.println("Error loading Chat.fxml: " + e.getMessage());
+            e.printStackTrace();
+            Alert alert = new Alert(AlertType.ERROR);
+            alert.setTitle("Error");
+            alert.setHeaderText("Could Not Load Chat");
+            alert.setContentText("There was an error trying to display the chat window. Please try again later.");
+            alert.showAndWait();
+        }
+    }
+
+    @FXML
+    @SuppressWarnings("unused")
     private void exitGame() {
         Platform.exit();
+    }
+
+    @FXML
+    public void initialize() {
+        // Set the background image for the main menu
+        Image bgImage = new Image(getClass().getResourceAsStream("/com/dungeon/assets/images/mainmenu.jpg"));
+        ImageView bgView = new ImageView(bgImage);
+        bgView.setPreserveRatio(false);
+        bgView.setFitWidth(mainMenuRoot.getWidth());
+        bgView.setFitHeight(mainMenuRoot.getHeight());
+        bgView.fitWidthProperty().bind(mainMenuRoot.widthProperty());
+        bgView.fitHeightProperty().bind(mainMenuRoot.heightProperty());
+        bgView.setSmooth(true);
+        bgView.setCache(true);
+        // Add the background image as the first child
+        mainMenuRoot.getChildren().add(0, bgView);
     }
 }

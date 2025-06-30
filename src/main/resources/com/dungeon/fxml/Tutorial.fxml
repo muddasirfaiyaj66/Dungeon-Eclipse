@@ -51,7 +51,7 @@
                         <Text fill="white" style="-fx-font-size: 14px; -fx-font-weight: bold;" text="Left Click" GridPane.columnIndex="0" GridPane.rowIndex="2" />
                         <Text fill="white" style="-fx-font-size: 14px;" text="Attack" GridPane.columnIndex="1" GridPane.rowIndex="2" />
                         
-                        <Text fill="white" style="-fx-font-size: 14px; -fx-font-weight: bold;" text="E" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+                        <Text fill="white" style="-fx-font-size: 14px; -fx-font-weight: bold;" text="F" GridPane.columnIndex="0" GridPane.rowIndex="3" />
                         <Text fill="white" style="-fx-font-size: 14px;" text="Interact with objects" GridPane.columnIndex="1" GridPane.rowIndex="3" />
                         
                         <Text fill="white" style="-fx-font-size: 14px; -fx-font-weight: bold;" text="I" GridPane.columnIndex="0" GridPane.rowIndex="4" />
@@ -80,7 +80,7 @@
                     <Text fill="white" style="-fx-font-size: 14px;" text="◆ Each playthrough features a unique procedurally generated dungeon." wrappingWidth="600" />
                     <Text fill="white" style="-fx-font-size: 14px;" text="◆ Explore rooms, battle enemies, and collect treasures." wrappingWidth="600" />
                     <Text fill="white" style="-fx-font-size: 14px;" text="◆ Solve puzzles to unlock paths and discover secrets." wrappingWidth="600" />
-                    <Text fill="white" style="-fx-font-size: 14px;" text="◆ Defeat the boss at the end of each level to progress." wrappingWidth="600" />
+                    <Text fill="white" style="-fx-font-size: 14px;" text="◆ Defeat the boss at the end of 3 levels to win." wrappingWidth="600" />
                     <Text fill="white" style="-fx-font-size: 14px;" text="◆ Manage your inventory and use items wisely." wrappingWidth="600" />
                 </VBox>
                 

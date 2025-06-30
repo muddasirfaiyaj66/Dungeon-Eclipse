@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.scene.image.ImageView?>
-<?import javafx.scene.image.Image?>
 <?import javafx.scene.layout.StackPane?>
 
 <StackPane fx:controller="com.dungeon.controllers.SplashScreenController"
@@ -9,11 +7,4 @@
            xmlns="http://javafx.com/javafx/11.0.1"
            xmlns:fx="http://javafx.com/fxml/1"
            style="-fx-background-color: #1a1a1a;">
-    <children>
-        <ImageView fitHeight="768" fitWidth="1024" preserveRatio="true" StackPane.alignment="CENTER">
-            <image>
-                <Image url="@../assets/images/dungeon_eclipse.png" />
-            </image>
-        </ImageView>
-    </children>
 </StackPane> 

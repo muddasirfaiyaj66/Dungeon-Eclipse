@@ -9,6 +9,8 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.util.Duration;
 
 public class SplashScreenController {
@@ -18,6 +20,19 @@ public class SplashScreenController {
 
     @FXML
     public void initialize() {
+        // Set the background image for the splash screen to use full screen
+        Image bgImage = new Image(getClass().getResourceAsStream("/com/dungeon/assets/images/dungeon_eclipse.png"));
+        ImageView bgView = new ImageView(bgImage);
+        bgView.setPreserveRatio(false);
+        bgView.setFitWidth(rootPane.getWidth());
+        bgView.setFitHeight(rootPane.getHeight());
+        bgView.fitWidthProperty().bind(rootPane.widthProperty());
+        bgView.fitHeightProperty().bind(rootPane.heightProperty());
+        bgView.setSmooth(true);
+        bgView.setCache(true);
+        // Add the background image as the first child
+        rootPane.getChildren().add(0, bgView);
+
         Platform.runLater(() -> {
             if (rootPane.getScene() != null) {
                 // A deep, dark blue for the transition background
